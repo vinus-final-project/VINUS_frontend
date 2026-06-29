@@ -1,0 +1,320 @@
+/* ──────────────────────────────────────────────────────────────
+ * orderDetail.css — 메뉴 상세 페이지
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   header (navbar)  : h180  + margin-bottom 30 (navbar.css)
+ *   양옆 margin       : 80
+ *   섹션 간 gap       : 30 (order-detail-scroll 의 gap)
+ *
+ *   메뉴설명 카드 (info-card)
+ *     - h: 반응형 (콘텐츠에 따라)
+ *     - padding: 80
+ *     - 메뉴명: 좌상
+ *     - 메뉴 설명: 메뉴명과 gap 30
+ *     - 가격: 우하
+ *
+ *   무료 / 유료 옵션 카드 (acc)
+ *     - h: 반응형 (펼치면 콘텐츠 만큼)
+ *     - 접힌 상태: h 90 (acc-head 만 보임)
+ *
+ *   수량조절 (qty-row)
+ *     - 버튼: h90 w375  / between gap 170 (- 와 + 사이)
+ *
+ *   하단 푸터 (order-detail-footer)
+ *     - h 360
+ *     - 취소 / 선택 완료: w430 h150 (order 페이지 footer 와 동일)
+ * ────────────────────────────────────────────────────────────── */
+
+/* ── 스크롤 영역 ──────────────────────────────────────────── */
+.order-detail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);            /* 섹션 간 30 */
+}
+
+/* ── 메뉴 정보 카드 (h 반응형, padding 80) ────────────────── */
+.info-card {
+  flex-shrink: 0;                       /* ★ flex 부모가 압축 못 하게 */
+  margin: 0 var(--space-side);
+  padding: calc(80 * var(--u));
+  background: var(--color-bg-2);
+  border: calc(1 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+  /* 2 cols × 2 rows grid:
+   *   row1: name (양쪽 col span)
+   *   row2: desc (col1) + price (col2, 우하)
+   */
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: calc(40 * var(--u));
+  row-gap: calc(30 * var(--u));         /* name ~ desc 사이 30 */
+}
+.info-name {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: calc(72 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+}
+.info-desc {
+  margin: 0;
+  align-self: end;
+  font-size: calc(36 * var(--u));
+  line-height: 1.4;
+  color: var(--color-white-pressed);
+  word-break: keep-all;
+}
+.info-price {
+  margin: 0;
+  align-self: end;
+  justify-self: end;                     /* 우하 */
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ── 필수옵션 카드 (컵 선택 등) — 항상 펼침, 반응형 h ────── */
+.opt-card {
+  flex-shrink: 0;                       /* ★ */
+  margin: 0 var(--space-side);
+  padding: calc(40 * var(--u));
+  background: var(--color-bg-2);
+  border: calc(1 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: calc(30 * var(--u));
+}
+.opt-title {
+  margin: 0;
+  font-size: calc(40 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+/* ── 아코디언 (무료 / 유료) — 접힘 h90, 펼침 반응형 ────────── */
+.acc {
+  flex-shrink: 0;                       /* ★ 접힘 90u / 펼침 자연 높이 유지 */
+  margin: 0 var(--space-side);
+  background: var(--color-bg-2);
+  border: calc(1 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.acc-head {
+  width: 100%;
+  height: calc(90 * var(--u));
+  padding: 0 calc(40 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: calc(40 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+  background: transparent;
+}
+.acc-toggle {
+  font-size: calc(32 * var(--u));
+  font-weight: 500;
+  color: var(--color-white-pressed);
+}
+.acc-body {
+  padding: 0 calc(40 * var(--u)) calc(40 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(20 * var(--u));
+}
+
+/* 옵션 라벨 (컵 선택, 설탕시럽, 농도, …) */
+.opt-label {
+  margin: calc(20 * var(--u)) 0 0;
+  font-size: calc(36 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+/* 옵션 칩 행 */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-section);            /* 30 */
+}
+.chip {
+  height: calc(80 * var(--u));
+  min-width: calc(180 * var(--u));
+  padding: 0 calc(30 * var(--u));
+  font-size: calc(32 * var(--u));
+  font-weight: 500;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+}
+.chip.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.opt-divider {
+  border: none;
+  border-top: calc(1 * var(--u)) solid var(--color-white-pressed);
+  margin: calc(20 * var(--u)) 0 0;
+}
+
+/* ── 유료 옵션 내부 (목록 + 스크롤 ▲▼) ──────────────────────
+ *    scroll 버튼 stack 총 높이 = 305 + 30 + 305 = 640u
+ *    paid-list 도 같은 높이로 맞춰 양쪽 정렬 + 잘림 방지              */
+.acc-scroll-area {
+  display: flex;
+  gap: calc(20 * var(--u));
+}
+.acc-scroll-list {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: calc(640 * var(--u));      /* scroll 버튼 stack 과 동일 */
+  overflow-y: auto;
+  padding-right: calc(8 * var(--u));
+  scrollbar-width: none;
+}
+.acc-scroll-list::-webkit-scrollbar { display: none; }
+.paid-item {
+  display: flex;
+  flex-direction: column;
+  gap: calc(16 * var(--u));
+  padding: calc(20 * var(--u)) 0;
+}
+.paid-item-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.paid-name {
+  font-size: calc(36 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+}
+.paid-price {
+  font-size: calc(32 * var(--u));
+  font-weight: 500;
+  color: var(--color-white);
+}
+
+/* +/- 스테퍼 */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: calc(20 * var(--u));
+}
+.step-btn {
+  width: calc(80 * var(--u));
+  height: calc(80 * var(--u));
+  font-size: calc(40 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-sm);
+}
+.step-count {
+  min-width: calc(60 * var(--u));
+  text-align: center;
+  font-size: calc(36 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+/* 내부 상하 스크롤 ▲▼ (w90 h305, between gap 30) */
+.acc-scrollbtns {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);             /* 30 */
+}
+.acc-scroll-btn {
+  width: calc(90 * var(--u));
+  height: calc(305 * var(--u));
+  font-size: calc(36 * var(--u));
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-sm);
+}
+
+/* 합계 */
+.paid-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: calc(20 * var(--u));
+  padding-top: calc(20 * var(--u));
+  border-top: calc(1 * var(--u)) solid var(--color-white-pressed);
+}
+.paid-total-label {
+  font-size: calc(36 * var(--u));
+  font-weight: 600;
+  color: var(--color-white-pressed);
+}
+.paid-total-value {
+  font-size: calc(50 * var(--u));
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ── 수량 조절 (- 와 + 사이 gap 170, 각 w375 h90) ────────── */
+.qty-row {
+  flex-shrink: 0;                       /* ★ */
+  margin: 0 var(--space-side);
+  height: calc(90 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.qty-btn {
+  width: calc(375 * var(--u));
+  height: 100%;
+  font-size: calc(60 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+}
+.qty-count {
+  width: calc(170 * var(--u));            /* - 와 + 사이 170 */
+  text-align: center;
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+/* ── 하단 푸터 (h360, 내부 w430 × h150 × 2 버튼) ──────────── */
+.order-detail-footer {
+  flex-shrink: 0;
+  height: var(--footer-h);                /* 360 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-section-l);            /* 60 */
+}
+.bottom-btn {
+  width: calc(430 * var(--u));
+  height: var(--footer-item-h);           /* 150 */
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  border-radius: var(--radius-md);
+}
+.bottom-btn--ghost {
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+}
+.bottom-btn--accent {
+  color: var(--color-white);
+  background: var(--color-accent);
+}
+.bottom-btn--accent:focus-visible {
+  outline-color: var(--color-white);
+}

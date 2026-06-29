@@ -1,0 +1,40 @@
+/* ──────────────────────────────────────────────────────────────
+ * start.css — 스플래시 페이지
+ * 시안의 PNG 만 사용 (캐릭터 + 워드마크).
+ * ────────────────────────────────────────────────────────────── */
+
+.start-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(60 * var(--u));
+  width: 100%;
+  background: var(--color-bg);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+  outline: none;
+}
+.start-screen:focus-visible {
+  outline: calc(6 * var(--u)) solid var(--color-white);
+  outline-offset: calc(-12 * var(--u));
+}
+
+/* 캐릭터 (가로 기준 폭, 비율 유지) */
+.start-icon {
+  width: calc(560 * var(--u));
+  height: auto;
+  display: block;
+  pointer-events: none;
+}
+
+/* 워드마크 (vinus) */
+.start-logo-text {
+  width: calc(600 * var(--u));
+  height: auto;
+  display: block;
+  pointer-events: none;
+}

@@ -1,0 +1,236 @@
+/* ──────────────────────────────────────────────────────────────
+ * cart.css — 장바구니 페이지
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   header (navbar)  : h180 + margin-bottom 30 (navbar.css)
+ *   양옆 margin       : 80
+ *
+ *   돌아가기 버튼     : h120, w430 (가운데)
+ *   수량/금액 요약    : 2 cols × 2 rows (label/value)
+ *   메뉴리스트 영역   : h890 (메뉴리스트 + ▲▼ 버튼 포함)
+ *     - 메뉴 카드      : h200, 카드별 gap 30
+ *     - ▲▼ 버튼      : w90 × h305, 사이 gap 30
+ *
+ *   footer            : h360
+ *     - 결제 버튼      : h150 (w = 920u, 좌우 80)
+ *
+ *   섹션 간 gap       : 30 (cart-scroll 의 gap)
+ * ────────────────────────────────────────────────────────────── */
+
+/* ── 스크롤 영역 ──────────────────────────────────────────── */
+/*    gap 은 섹션별로 다르므로 cart-scroll 자체에는 안 주고
+ *    각 섹션의 margin-top 으로 명시 (back→summary 60 / summary→list auto)  */
+.cart-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;                     /* 메뉴리스트 자체가 내부 스크롤 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 전체 삭제 버튼 (h120 w367, 빨강) — 예전 '돌아가기' 자리 ── */
+.back-row {
+  flex-shrink: 0;
+  height: calc(120 * var(--u));
+  display: flex;
+  justify-content: center;
+}
+.cart-clear-btn {
+  width: calc(367 * var(--u));
+  height: 100%;
+  font-size: calc(50 * var(--u));
+  font-weight: 600;
+  color: #ff8787;
+  background: #822020;
+  border: calc(5 * var(--u)) solid #ff8787;
+  border-radius: calc(30 * var(--u));
+}
+.cart-clear-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── 수량 / 금액 요약 (2 × 2 grid) ─────────────────────────
+ *    - 돌아가기 ↔ 수량/금액 라벨 행: 60
+ *    - 수량/금액 라벨 행 ↔ 값(4개 / 36,000원) 행: 60                  */
+.summary-grid {
+  flex-shrink: 0;
+  margin: calc(60 * var(--u)) var(--space-side) 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: calc(60 * var(--u));
+}
+.summary-head {
+  font-size: calc(40 * var(--u));
+  font-weight: 500;
+  color: var(--color-white);
+  text-align: center;
+}
+.summary-count {
+  font-size: calc(72 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+  text-align: center;
+}
+.summary-total {
+  font-size: calc(72 * var(--u));
+  font-weight: 700;
+  color: var(--color-accent);
+  text-align: center;
+}
+
+/* ── 메뉴리스트 영역 ───────────────────────────────────────
+ *    전체 width 920 (margin 80 양옆에 flush), 높이 890
+ *    메뉴리스트(800) + gap 30 + ▲▼(90) = 920 가로 분할
+ *    결제하기 버튼 top 과 gap 109 → list-area 아래 4u 추가 margin              */
+.list-area {
+  flex-shrink: 0;
+  margin: auto var(--space-side) calc(4 * var(--u));
+  height: calc(890 * var(--u));
+  display: flex;
+  gap: var(--space-section);            /* 메뉴리스트 ↔ ▲▼ 사이 30 */
+}
+
+.cart-list {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);            /* 카드별 30 */
+  scrollbar-width: none;
+}
+.cart-list::-webkit-scrollbar { display: none; }
+
+/* ── 메뉴 카드 (h220) ──────────────────────────────────────
+ *    2 × 2 grid:
+ *      [name  (좌상)              ] [X  (우상, 90×90)        ]
+ *      [-/qty/+ (좌하, w300 h60)  ] [price (우하, 오렌지)     ]
+ *    padding T20 / B30 / L30 / R30  → content 폭 = 800 − 60 = 740                            */
+.cart-item {
+  flex-shrink: 0;
+  width: 100%;
+  height: calc(220 * var(--u));
+  padding: calc(20 * var(--u)) calc(30 * var(--u)) calc(30 * var(--u)) calc(30 * var(--u));
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: calc(20 * var(--u));
+  column-gap: calc(20 * var(--u));
+  background: var(--color-bg-2);
+  border: calc(1 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+}
+.cart-name {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  align-self: center;
+  font-size: calc(40 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+/* 개별 삭제 (X) — h90 × w90, 우상단 grid cell */
+.cart-remove-btn {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  justify-self: end;
+  align-self: start;
+  width: calc(90 * var(--u));
+  height: calc(90 * var(--u));
+  background: #822020;
+  color: var(--color-white);
+  border: calc(2 * var(--u)) solid #ff8787;
+  border-radius: var(--radius-sm);
+  font-size: calc(48 * var(--u));
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 수량 - [count] + (각 버튼 w100 × h60, count 가 가운데 100u 차지) */
+.cart-qty {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+  display: flex;
+  align-items: center;
+  width: calc(300 * var(--u));          /* 100 + 100 + 100 */
+}
+.cart-qty-btn {
+  flex: 0 0 calc(100 * var(--u));
+  height: calc(60 * var(--u));
+  font-size: calc(36 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-sm);
+}
+.cart-qty-count {
+  flex: 1 1 0;                          /* - 와 + 사이 = 100u */
+  text-align: center;
+  font-size: calc(36 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.cart-price {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  align-self: center;
+  justify-self: end;
+  font-size: calc(44 * var(--u));
+  font-weight: 700;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+/* 우측 ▲▼ 스크롤 버튼 (w90, 카드 영역과 gap 30 으로 나란히 배치) */
+.list-scrollbtns {
+  flex: 0 0 auto;
+  width: calc(90 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(60 * var(--u));
+}
+.cart-scroll-btn {
+  flex: 1 1 0;
+  width: 100%;
+  font-size: calc(36 * var(--u));
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-sm);
+}
+
+/* ── 하단 푸터 (h360, 돌아가기 + 결제 / 각 w430 × h150, gap 60) ── */
+.cart-footer {
+  flex-shrink: 0;
+  height: var(--footer-h);              /* 360 */
+  margin: 0 var(--space-side);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(60 * var(--u));
+}
+.footer-back-btn {
+  width: calc(430 * var(--u));
+  height: calc(150 * var(--u));
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+  font-size: calc(60 * var(--u));
+  font-weight: 600;
+}
+.pay-btn {
+  width: calc(430 * var(--u));
+  height: calc(150 * var(--u));
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  border-radius: var(--radius-md);
+}
+.pay-btn:focus-visible { outline-color: var(--color-white); }

@@ -1,0 +1,99 @@
+import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { START_HOLD_MS as HOLD_MS } from "../../constants";
+import iconLight from "../../assets/VINUS_icon_light.png";
+import textLight from "../../assets/VINUS_text_light.png";
+import "./start.css";
+
+/* ──────────────────────────────────────────────────────────────
+ * Start — 프로그램 실행 시 가장 먼저 나오는 스플래시 페이지
+ *
+ * 시안: VINUS_icon_light.png (캐릭터) + VINUS_text_light.png (워드마크)
+ *
+ * 동작:
+ *  - 키보드 키 또는 마우스/터치를 3초 이상 누르고 있으면 /main 으로 이동
+ *  - 짧게 클릭 시 alert("화면")  — 이벤트 작성 위치 식별용
+ *
+ * 구현 노트:
+ *  - root 를 <button> 대신 <div role="button"> 으로 둠
+ *    (<button> 은 Enter/Space 가 keydown 단계에서 synthetic click 을 합성)
+ *  - e.repeat (OS 자동 반복) 은 무시
+ *  - 시각적 진행 표시는 시안에 없으므로 제거 (기능만 유지)
+ * ────────────────────────────────────────────────────────────── */
+
+export default function Start() {
+  const navigate = useNavigate();
+  const holdTimerRef = useRef(null);
+  const heldKeyRef = useRef(null);
+  const pointerHoldingRef = useRef(false);
+
+  const startHold = () => {
+    if (holdTimerRef.current) return;
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null;
+      heldKeyRef.current = null;
+      pointerHoldingRef.current = false;
+      navigate("/main");
+    }, HOLD_MS);
+  };
+
+  const cancelHold = () => {
+    if (!holdTimerRef.current) return;
+    clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+    heldKeyRef.current = null;
+    pointerHoldingRef.current = false;
+  };
+
+  /* 키보드 hold */
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.repeat || heldKeyRef.current) return;
+      heldKeyRef.current = e.key;
+      startHold();
+    };
+    const onKeyUp = (e) => {
+      if (heldKeyRef.current === e.key) cancelHold();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      cancelHold();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* 포인터 hold (마우스/터치) */
+  const onPointerDown = () => {
+    pointerHoldingRef.current = true;
+    startHold();
+  };
+  const onPointerEndAny = () => {
+    if (pointerHoldingRef.current) cancelHold();
+  };
+
+  /* 짧게 클릭 → alert */
+  const handleScreenClick = () => {
+    alert("화면");
+    // TODO: 실제 동작 (예: 음성 안내 시작) 연결
+  };
+
+  return (
+    <div
+      className="start-screen"
+      role="button"
+      tabIndex={0}
+      aria-label="시작 화면. 아무 키나 3초간 누르고 있으면 주문이 시작됩니다."
+      onClick={handleScreenClick}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerEndAny}
+      onPointerCancel={onPointerEndAny}
+      onPointerLeave={onPointerEndAny}
+    >
+      <img className="start-icon" src={iconLight} alt="" aria-hidden="true" />
+      <img className="start-logo-text" src={textLight} alt="vinus" />
+    </div>
+  );
+}

@@ -1,0 +1,63 @@
+/* ──────────────────────────────────────────────────────────────
+ * pay.css — 결제 진행 페이지 (header / footer 없이 전체 영역 사용)
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   주황 원 (pay-indicator)
+ *     - h200 × w200, 페이지 맨 위에서부터 top 734
+ *   안내문 (pay-message)
+ *     - 페이지 맨 아래에서부터 bottom 734
+ *     (= 텍스트박스 bottom edge 가 frame 바닥에서 734u 위)
+ *
+ * 두 요소 모두 가로 가운데 정렬.
+ * ────────────────────────────────────────────────────────────── */
+
+.pay-body {
+  flex: 1 1 auto;
+  position: relative;           /* 절대 위치 자식의 기준 박스 */
+  min-height: 0;
+}
+
+/* ── 주황 원 (h200 w200, top 734, 가로 중앙) ──────────────── */
+.pay-indicator {
+  position: absolute;
+  top: calc(734 * var(--u));
+  left: 50%;
+  width: calc(200 * var(--u));
+  height: calc(200 * var(--u));
+  margin-left: calc(-100 * var(--u));   /* w200/2 — 가로 가운데 */
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+/* processing 상태 — 살짝 옅고 펄스 애니메이션 */
+.pay-indicator.is-loading {
+  opacity: 0.6;
+  animation: pay-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pay-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(0.9);
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pay-indicator.is-loading { animation: none; }
+}
+
+/* ── 안내문 (bottom 734 from frame bottom, 가로 중앙) ──────── */
+.pay-message {
+  position: absolute;
+  bottom: calc(734 * var(--u));
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-white);
+  word-break: keep-all;
+}

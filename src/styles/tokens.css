@@ -1,0 +1,57 @@
+/* ──────────────────────────────────────────────────────────────
+ * tokens.css — 디자인 토큰
+ *
+ * 색은 ★ 7개 만 ★ 사용 (다른 hex 값을 CSS 어디에도 직접 적지 말 것).
+ *   1) --color-bg              #262626  기본 배경
+ *   2) --color-bg-2            #3d3d3d  밝은 회색 (header, 메뉴 카드 등)
+ *   3) --color-accent          #fe8400  포인트
+ *   4) --color-white           #ffffff  텍스트 / 테두리
+ *   5) --color-bg-2-pressed    #2e2e2e  bg-2 누름 상태
+ *   6) --color-accent-pressed  #e07300  accent 누름 상태
+ *   7) --color-white-pressed   #d9d9d9  white 누름 상태
+ *
+ * 크기는 figma 1080×1920 기준 px → calc(N * var(--u))
+ * (--u 는 app.css 에서 viewport 에 맞춰 자동 계산)
+ * ────────────────────────────────────────────────────────────── */
+
+:root,
+.kiosk-frame {
+  /* ── 7 컬러 ──────────────────────────────────────────── */
+  --color-bg:             #262626;
+  --color-bg-2:           #3d3d3d;
+  --color-accent:         #fe8400;
+  --color-white:          #ffffff;
+  --color-bg-2-pressed:   #2e2e2e;
+  --color-accent-pressed: #e07300;
+  --color-white-pressed:  #d9d9d9;
+
+  /* ── 공통 간격 (figma px) ─────────────────────────────── */
+  --space-side:      calc(80 * var(--u));   /* 좌우 여백 (전 페이지 공통) */
+  --space-section:   calc(30 * var(--u));   /* 일반 섹션 gap */
+  --space-section-l: calc(60 * var(--u));   /* 큰 섹션 gap (drop) */
+
+  /* ── 헤더 (navbar) — h180, 위 50 / 아래 30, 버튼 100 ───── */
+  --header-h:        calc(180 * var(--u));
+  --header-pad-top:  calc(50 * var(--u));
+  --header-pad-btm:  calc(30 * var(--u));
+  --header-btn-h:    calc(100 * var(--u));
+
+  /* ── 푸터 ──────────────────────────────────────────────── */
+  --footer-h:        calc(360 * var(--u));
+  --footer-item-h:   calc(150 * var(--u));
+
+  /* ── 버튼 타입별 공통 크기 ─────────────────────────────── */
+  --btn-primary-h:   calc(150 * var(--u));  /* 강조: 주문/결제 */
+  --btn-secondary-h: calc(90 * var(--u));   /* 보조: 취소/처음으로/페이지네이션 */
+
+  /* ── 라운드 ────────────────────────────────────────────── */
+  --radius-sm:       calc(10 * var(--u));
+  --radius-md:       calc(20 * var(--u));
+  --radius-lg:       calc(30 * var(--u));
+
+  /* ── 폰트 (임시 값, 추후 일괄 조정 예정) ───────────────── */
+  --font-sm:         calc(28 * var(--u));
+  --font-md:         calc(36 * var(--u));
+  --font-lg:         calc(48 * var(--u));
+  --font-xl:         calc(64 * var(--u));
+}

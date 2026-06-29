@@ -1,0 +1,159 @@
+/* ──────────────────────────────────────────────────────────────
+ * end.css — 결제 완료(결제내역) 페이지 (header / footer 없이 절대 위치)
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   감사 텍스트박스       : top 350 (frame top 기준)
+ *   '5초 후 …' 텍스트박스 : 위 텍스트와 gap 30
+ *   메뉴리스트 영역        : cart 와 동일 (h890, 카드 h200,
+ *                            ▲▼ w90×h415 gap60), 수량 정보 추가
+ *   처음으로 버튼          : bottom 100 (frame bottom 기준), h150 × w920
+ *   ──
+ *   리스트 영역 위치       : 처음으로 버튼 위로 gap 30 → bottom = 280u
+ *                            (100 + 150 + 30 = 280, 위쪽에서 떨어진 거리)
+ * ────────────────────────────────────────────────────────────── */
+
+.end-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;                /* 절대 위치 자식의 기준 박스 */
+  overflow: hidden;
+}
+
+/* ── 감사 + 자동 복귀 안내 (top 350) ─────────────────────── */
+.end-head {
+  position: absolute;
+  top: calc(350 * var(--u));
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(30 * var(--u));          /* 텍스트 두 줄 사이 30 */
+}
+.end-title {
+  margin: 0;
+  text-align: center;
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+  word-break: keep-all;
+}
+.end-sub {
+  margin: 0;
+  text-align: center;
+  font-size: calc(36 * var(--u));
+  font-weight: 500;
+  color: var(--color-white);
+}
+.end-sec {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ── 메뉴리스트 영역 (cart 와 동일) ────────────────────────
+ *    ★ 전체 width 920 (margin 80 양옆에 flush)
+ *    ★ 메뉴리스트(800) + gap 30 + ▲▼(90) = 920
+ *    ★ 처음으로 버튼 top 과 gap 109 → bottom = 100 + 150 + 109 = 359u */
+.list-area {
+  position: absolute;
+  bottom: calc(359 * var(--u));
+  left: var(--space-side);
+  right: var(--space-side);
+  height: calc(890 * var(--u));
+  display: flex;
+  gap: var(--space-section);         /* 메뉴리스트 ↔ ▲▼ 사이 30 */
+}
+.end-list {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);         /* 카드 사이 30 */
+  scrollbar-width: none;
+}
+.end-list::-webkit-scrollbar { display: none; }
+
+/* 결제 내역 카드 (h200, w 800 = list 영역 풀 너비) */
+.end-item {
+  flex-shrink: 0;
+  width: 100%;
+  height: calc(200 * var(--u));
+  padding: 0 calc(40 * var(--u));
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 1fr 1fr;
+  column-gap: calc(40 * var(--u));
+  background: var(--color-bg-2);
+  border: calc(1 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+}
+.end-name {
+  grid-column: 1 / 2;
+  grid-row: 1 / 3;                   /* 좌측 두 줄 span (수직 중앙) */
+  align-self: center;
+  font-size: calc(44 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+}
+.end-count {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  justify-self: end;
+  align-self: end;
+  font-size: calc(36 * var(--u));
+  font-weight: 500;
+  color: var(--color-white-pressed);
+}
+.end-price {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+  justify-self: end;
+  align-self: start;
+  font-size: calc(44 * var(--u));
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ▲▼ 스크롤 (w90, 카드와 gap 30 으로 나란히 배치) */
+.list-scrollbtns {
+  flex: 0 0 auto;
+  width: calc(90 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(60 * var(--u));
+}
+.end-scroll-btn {
+  flex: 1 1 0;                       /* 남은 세로 1/2 씩 (= 415u) */
+  width: 100%;
+  font-size: calc(36 * var(--u));
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-sm);
+}
+
+/* ── 처음으로 버튼 (bottom 100, h150 × w920 = 좌우 80 여백) ── */
+.home-btn {
+  position: absolute;
+  bottom: calc(100 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(920 * var(--u));
+  height: calc(150 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(20 * var(--u));
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  border-radius: var(--radius-md);
+}
+.home-icon {
+  width: calc(56 * var(--u));
+  height: calc(56 * var(--u));
+}
+.home-btn:focus-visible { outline-color: var(--color-white); }

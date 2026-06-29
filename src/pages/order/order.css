@@ -1,0 +1,210 @@
+/* ──────────────────────────────────────────────────────────────
+ * order.css — 전체 메뉴 페이지 (figma node 268:167 1:1 매핑)
+ *
+ * Y축 좌표 (figma 절대 좌표 → margin-top 으로 변환)
+ *   navbar         h180 (0-180)             [Navbar 컴포넌트]
+ *   장바구니        h120 (210-330)  w367 radius30  font 50, icon 85×85
+ *   카테고리        h90  (360-450)  w180 × 5 (gap 30)  font 45
+ *   메뉴 grid       h960 (480-1440) 280×300 radius20 흰 border 1px, font 50/50
+ *   페이지네이션    h90  (1470-1560) w430 radius10 font 40
+ *   footer summary h150 (1669-1819) w430 radius30
+ *   footer 주문    h150 (1669-1819) w430 radius30 font 100
+ *
+ * 좌우 padding 80, summary/주문 gap 60 (570-510=60).
+ * ────────────────────────────────────────────────────────────── */
+
+.order-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);          /* ★ 섹션 사이 30 — padding 아닌 gap 으로 */
+}
+
+/* ── 장바구니 (figma w367 h120 radius30 border-5 orange) ── */
+.cart-row {
+  flex-shrink: 0;
+  height: calc(120 * var(--u));
+  display: flex;
+  justify-content: center;
+}
+.cart-btn {
+  width: calc(367 * var(--u));
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(24 * var(--u));
+  font-size: calc(50 * var(--u));
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-bg);
+  border: calc(5 * var(--u)) solid var(--color-accent);
+  border-radius: calc(30 * var(--u));
+}
+.cart-icon {
+  width: calc(85 * var(--u));
+  height: calc(85 * var(--u));
+}
+
+/* ── 카테고리 5개 가로 (figma w180×5, gap ~30, h90, font 45) ── */
+/*    좌우 80 위치는 padding 대신 자체 margin 으로                  */
+.category-bar {
+  flex-shrink: 0;
+  margin: 0 var(--space-side);
+  height: calc(90 * var(--u));
+  display: flex;
+  gap: var(--space-section);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.category-bar::-webkit-scrollbar { display: none; }
+.category-btn {
+  flex: 0 0 calc(180 * var(--u));
+  height: 100%;
+  font-size: calc(45 * var(--u));
+  font-weight: 500;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);          /* 20 */
+  white-space: nowrap;
+}
+.category-btn.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* ── 메뉴 격자 3×3 (figma 280×300 radius20, bg #3d3d3d, border1 white) ── */
+/*    좌표: left 80/400/720, top 480/810/1140 → col gap 40, row gap 30 */
+.menu-grid {
+  flex-shrink: 0;
+  margin: 0 auto;                     /* 가로 중앙. 세로 gap 은 order-scroll 의 gap */
+  display: grid;
+  grid-template-columns: repeat(3, calc(280 * var(--u)));
+  grid-template-rows: repeat(3, calc(300 * var(--u)));
+  column-gap: calc(40 * var(--u));
+  row-gap: var(--space-section);
+}
+.menu-card {
+  width: calc(280 * var(--u));
+  height: calc(300 * var(--u));
+  /* figma: 이름 영역 215u (상단 70%), 가격 영역 85u (하단 30%).
+     각 영역 안에서 텍스트 중앙 정렬 → 1줄 / 2줄 이름이 같은 위치에 놓임. */
+  display: grid;
+  grid-template-rows: calc(215 * var(--u)) calc(85 * var(--u));
+  place-items: center;
+  background: var(--color-bg-2);               /* #3d3d3d */
+  border: calc(1 * var(--u)) solid var(--color-white);  /* white 1px */
+  border-radius: var(--radius-md);          /* 20 */
+  color: var(--color-white);
+  text-align: center;
+}
+.menu-card:focus-visible { outline-color: var(--color-accent); }
+.menu-name {
+  font-size: calc(50 * var(--u));
+  font-weight: 400;
+  line-height: 1.15;
+  word-break: keep-all;
+}
+.menu-price {
+  font-size: calc(50 * var(--u));
+  font-weight: 400;
+  color: var(--color-accent);
+}
+.menu-card--empty {
+  background: var(--color-bg-2);
+  border-color: var(--color-white);
+  cursor: default;
+}
+
+/* ── 페이지네이션 ◀ ▶ (figma w430 h90 radius10 font 40, gap 60) ── */
+.pager {
+  flex-shrink: 0;
+  margin: 0 var(--space-side);              /* 좌우 80, 세로 gap 은 부모 gap */
+  height: var(--btn-secondary-h);           /* 90 */
+  display: flex;
+  justify-content: center;
+  gap: var(--space-section-l);              /* 60 */
+}
+.pager-btn {
+  width: calc(430 * var(--u));
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-sm);          /* 10 */
+}
+.pager-icon {
+  width: calc(56 * var(--u));
+  height: calc(56 * var(--u));
+}
+.pager-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── 하단 푸터 ─────────────────────────────────────────────
+ *    figma: pagination 1560 → summary/주문 1669 (gap 109)
+ *           summary/주문 h150 → bottom 1819 (frame bottom 1920: gap 101)
+ *    구현:  footer 영역 h360 으로 두고 align-items:center 로 항목 세로 가운데. */
+.order-footer {
+  flex-shrink: 0;
+  height: var(--footer-h);                  /* 360 */
+  padding: 0 var(--space-side);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-section-l);              /* 60 */
+}
+
+/* summary (figma w430 h150 radius30 border-2 #d9d9d9, 라벨/값 텍스트) */
+.summary {
+  width: calc(430 * var(--u));
+  height: var(--footer-item-h);             /* 150 */
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  column-gap: calc(20 * var(--u));
+  padding: 0 calc(36 * var(--u));
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);  /* #d9d9d9 */
+  border-radius: calc(30 * var(--u));
+}
+.summary-row {
+  display: contents;                        /* 그리드 셀에 자식 직접 배치 */
+}
+.summary-label {
+  font-size: calc(35 * var(--u));
+  font-weight: 400;
+  color: var(--color-white);
+}
+.summary-value {
+  font-size: calc(45 * var(--u));
+  font-weight: 500;
+  text-align: right;
+  color: var(--color-white);                 /* 수량은 흰색 */
+}
+/* 금액 행만 값이 오렌지 + 폰트 50 */
+.summary-row:last-child .summary-value {
+  font-size: calc(50 * var(--u));
+  color: var(--color-accent);
+}
+
+/* 주문 버튼 (figma w430 h150 radius30 bg orange, font 100) */
+.order-btn {
+  width: calc(430 * var(--u));
+  height: var(--footer-item-h);             /* 150 */
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: calc(100 * var(--u));
+  font-weight: 500;
+  border-radius: calc(30 * var(--u));
+}
+.order-btn:focus-visible { outline-color: var(--color-white); }

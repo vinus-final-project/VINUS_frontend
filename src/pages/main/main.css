@@ -1,0 +1,87 @@
+/* ──────────────────────────────────────────────────────────────
+ * main.css — 매장/포장 선택 페이지
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   header (navbar)  : h180 + margin-bottom 30 (navbar.css)
+ *   가맹점명 카드     : h105 × w760, header 와 gap 60
+ *                       (navbar margin 30 + 추가 30 = 60)
+ *   안내 텍스트박스    : 가맹점명 카드와 gap 340
+ *   매장/포장 버튼   : h250 × w350, 사이 gap 60
+ *                       footer 없이 frame bottom 으로부터 727 (= bottom edge)
+ *
+ * Y축 좌표 (frame 기준)
+ *   navbar          0–180
+ *   navbar margin    180–210
+ *   가맹점명 카드    240–345
+ *   (gap 340)        345–685
+ *   안내 텍스트      685–~830
+ *   매장/포장 버튼   943–1193  (bottom 727 → top 1193-250=943)
+ *
+ * main-scroll 은 frame 의 navbar 아래(=210)부터 frame bottom(1920) 까지 = 1710u.
+ * 안쪽 자식은 절대 위치, 좌표는 main-scroll 의 top/bottom 기준.
+ * ────────────────────────────────────────────────────────────── */
+
+.main-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;                /* 절대 위치 자식의 기준 박스 */
+  overflow: hidden;
+}
+
+/* ── 가맹점명 카드 (h105 × w760, header 와 gap 60) ────────── */
+/*    main-scroll 시작점 = navbar margin 30 위치
+ *    여기서 +30 더 내려가면 header 로부터 60 됨                            */
+.store-name {
+  position: absolute;
+  top: calc(30 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(760 * var(--u));
+  height: calc(105 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(40 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+  background: var(--color-bg-2);
+  border-radius: calc(30 * var(--u));
+}
+
+/* ── 안내 텍스트 (가맹점명 카드 bottom 135 + gap 340 = top 475) ── */
+.main-guide {
+  position: absolute;
+  top: calc(475 * var(--u));         /* main-scroll 기준 */
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: calc(50 * var(--u));
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-white);
+  word-break: keep-all;
+}
+
+/* ── 매장/포장 버튼 (h250 × w350, gap 60, frame bottom 으로부터 727) ── */
+/*    bottom 727 → 두 버튼의 bottom edge 가 frame bottom 에서 727u 위.   */
+.choice-row {
+  position: absolute;
+  bottom: calc(727 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: calc(60 * var(--u));
+}
+.choice-btn {
+  width: calc(350 * var(--u));
+  height: calc(250 * var(--u));
+  font-size: calc(110 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+  background: var(--color-accent);
+  border-radius: calc(32 * var(--u));
+}
+.choice-btn:active {
+  background: var(--color-accent-pressed);
+}

@@ -1,0 +1,124 @@
+/* ──────────────────────────────────────────────────────────────
+ * payment.css — 결제 방법 선택 / 카드 투입 안내 페이지
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   header (navbar)  : h180 + margin-bottom 30 (navbar.css)
+ *   양옆 margin       : 80
+ *   텍스트박스 (안내) : header bottom 부터 200 아래 (navbar margin 30 + 텍스트 margin 170)
+ *   금액 카드        : h200 w720, 텍스트박스로부터 120, padding 30
+ *                       내부: 금액(label) ↔ 36,000원(value) space-between
+ *   결제방법 카드     : h400 w400, 금액 카드로부터 120
+ *   footer           : h360 (좌측 취소 버튼)
+ * ────────────────────────────────────────────────────────────── */
+
+.payment-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;                       /* 섹션들 가로 중앙 */
+}
+
+/* ── 안내 문구 (header bottom 부터 200 아래)
+ *    navbar 의 margin-bottom 30 + .pay-title margin-top 170 = 200            */
+.pay-title {
+  margin: calc(170 * var(--u)) 0 0;
+  text-align: center;
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+  word-break: keep-all;
+}
+.pay-title-group {
+  margin-top: calc(170 * var(--u));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(20 * var(--u));
+}
+.pay-title-group .pay-title {
+  margin: 0;                                 /* 부모에 margin-top 있음 */
+}
+.pay-subtitle {
+  margin: 0;
+  text-align: center;
+  font-size: calc(36 * var(--u));
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-white-pressed);
+  word-break: keep-all;
+}
+
+/* ── 금액 카드 (h200 w720, padding 30, space-between, +120 위로부터) ── */
+.price-box {
+  margin-top: calc(120 * var(--u));
+  width: calc(720 * var(--u));
+  height: calc(200 * var(--u));
+  padding: calc(30 * var(--u));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-bg-2);
+  border-radius: calc(30 * var(--u));
+}
+.price-label {
+  font-size: calc(50 * var(--u));
+  font-weight: 500;
+  color: var(--color-white);
+}
+.price-value {
+  font-size: calc(72 * var(--u));
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ── 결제방법 카드 / 카드 투입 일러스트 (h400 w400, +120 위로부터) ── */
+.pay-center {
+  margin-top: calc(120 * var(--u));
+}
+.card-method-btn {
+  width: calc(400 * var(--u));
+  height: calc(400 * var(--u));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(16 * var(--u));
+  font-size: calc(72 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+  background: var(--color-bg-2);
+  border: calc(4 * var(--u)) solid var(--color-accent);
+  border-radius: calc(30 * var(--u));
+}
+.card-method-btn .dot {
+  font-size: calc(36 * var(--u));
+  line-height: 1;
+}
+.reader-illu {
+  display: block;
+  width: calc(400 * var(--u));
+  height: calc(400 * var(--u));
+  object-fit: contain;
+}
+
+/* ── 하단 푸터 (h360, 좌측 취소) ───────────────────────────── */
+.payment-footer {
+  flex-shrink: 0;
+  height: var(--footer-h);                   /* 360 */
+  padding: 0 var(--space-side);              /* 좌우 80 */
+  display: flex;
+  align-items: center;
+}
+.cancel-btn {
+  width: calc(430 * var(--u));
+  height: calc(150 * var(--u));
+  font-size: calc(60 * var(--u));
+  font-weight: 600;
+  color: var(--color-white);
+  background: var(--color-bg);
+  border: calc(2 * var(--u)) solid var(--color-white);
+  border-radius: var(--radius-md);
+}
+.cancel-btn:focus-visible { outline-color: var(--color-white); }

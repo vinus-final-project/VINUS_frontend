@@ -1,0 +1,84 @@
+/* ──────────────────────────────────────────────────────────────
+ * app.css — 공용 레이아웃 (RootLayout)
+ * 컬러 팔레트: #262626 / #FE8400 / #FFFFFF
+ *
+ * 9:16 폰 프레임을 화면 중앙에 고정하고, 그 안에서 각 페이지를 렌더.
+ * 스크롤 안정성: 프레임은 고정 높이 flex column. 페이지의 nav/footer 는
+ * flex-shrink:0, 스크롤 영역(.kiosk-scroll)만 flex:1 + min-height:0.
+ * ────────────────────────────────────────────────────────────── */
+
+/* ※ 색·간격·버튼 토큰은 src/styles/tokens.css 에서 정의 (--color-bg, --u 등) */
+
+/* 프레임 바깥: 뷰포트 가득 + 바깥 스크롤 차단 */
+.kiosk-stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/* 키오스크 프레임 — 반응형 9:16 (실제 디스플레이 기준 1080×1920 비율)
+ *
+ * ★ 디자인 규칙: 모든 페이지 CSS 는 figma px 을 그대로 적되,
+ *   숫자에 `* var(--u)` 곱하기. 예) figma 180px → calc(180 * var(--u))
+ *
+ * --u 정의:
+ *   --u = "프레임 안에서 figma 1px 이 실제 몇 px 인가" 의 길이값.
+ *   프레임 폭이 1080 이면 1u = 1px,  540 이면 0.5px,  2160 이면 2px.
+ *   브라우저 창 크기가 변하면 자동으로 비례 축소·확대됨 → 진짜 반응형.
+ *
+ * 프레임 크기:
+ *   width  = 1080 * --u  (즉 frame 폭 = 그대로 figma 폭)
+ *   height = 1920 * --u
+ *   --u 가 viewport 에 맞춰 자동 계산되므로 frame 도 viewport 에 맞게 늘어남.
+ *
+ * 9:16 보다 가로가 더 긴 뷰포트(노트북 가로 화면 등)에서는 양옆에 검정 여백,
+ * 9:16 보다 세로가 더 긴 뷰포트(좁고 긴 창)에서는 위아래에 검정 여백.
+ * 두 경우 모두 frame 안의 모든 px 값은 비율 그대로 같이 작아지거나 커짐. */
+.kiosk-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* 1u = 1 figma-px. 가로/세로 둘 다 fit 하도록 min() */
+  --u: calc(min(100dvh, calc(100dvw * 16 / 9)) / 1920);
+  width: calc(1080 * var(--u));
+  height: calc(1920 * var(--u));
+  background: var(--color-bg);
+  color: var(--color-white);
+  box-shadow: 0 calc(18 * var(--u)) calc(50 * var(--u)) rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif;
+}
+
+.kiosk-frame *,
+.kiosk-frame *::before,
+.kiosk-frame *::after {
+  box-sizing: border-box;
+}
+
+/* 공통 버튼 리셋 + 접근성(포커스)
+ * ★ 전체를 :where(...) 로 감싸 특정도 0,0,0 으로 만듦.
+ *   페이지 클래스(.cart-btn, .menu-card, .category-btn …) 의
+ *   background/border 가 무조건 reset 을 이김. */
+:where(.kiosk-frame button) {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(.kiosk-frame button:focus-visible) {
+  outline: 3px solid var(--color-white);
+  outline-offset: 2px;
+}
+
+/* 스크롤 영역 공통 골격 (세부 padding/gap 은 각 페이지 CSS에서) */
+.kiosk-scroll {
+  flex: 1 1 auto;
+  min-height: 0; /* ★ flex 자식 오버플로 붕괴 방지의 핵심 */
+  overflow-y: auto;
+}

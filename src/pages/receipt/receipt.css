@@ -1,0 +1,79 @@
+/* ──────────────────────────────────────────────────────────────
+ * receipt.css — 영수증 수령 페이지 (header / footer 없이 절대 위치)
+ *
+ * 명세 (모든 값 figma 1080×1920 기준 px → calc(N * var(--u)))
+ *   텍스트박스 (안내)    : top 390 (frame top 기준)
+ *   영수증 사진          : h600 (가로 중앙, 텍스트 아래)
+ *   영수증 안 받기 버튼  : h150 × w764, 가로 중앙
+ *   영수증 받기 버튼    : h150 × w764, bottom 388 (frame bottom 기준)
+ *   두 버튼 사이 gap     : 60
+ * ────────────────────────────────────────────────────────────── */
+
+.receipt-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;                /* 절대 위치 자식의 기준 박스 */
+  overflow: hidden;
+}
+
+/* ── 안내 텍스트 (top 390) ───────────────────────────────── */
+.receipt-title {
+  position: absolute;
+  top: calc(390 * var(--u));
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: calc(60 * var(--u));
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-white);
+  word-break: keep-all;
+}
+
+/* ── 영수증 일러스트 (h600, 텍스트와 버튼 사이 가로 중앙) ── */
+.receipt-illu-wrap {
+  position: absolute;
+  /* 텍스트 아래(~520u) ~ 버튼 위(~970u) 사이를 가로 중앙으로 채움.
+     이미지 자체 height: 600u 으로 자연스러운 비율 유지. */
+  top: calc(560 * var(--u));
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+}
+.receipt-illu {
+  display: block;
+  height: calc(600 * var(--u));
+  width: auto;
+}
+
+/* ── 버튼 영역 (bottom 388, 두 버튼 stack, gap 60) ───────── */
+/*    DOM 순서: 영수증 안 받기(상) → 영수증 받기(하)
+ *    영수증 받기 의 bottom edge = frame bottom 388            */
+.receipt-actions {
+  position: absolute;
+  bottom: calc(388 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(764 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: calc(60 * var(--u));
+}
+.receipt-btn {
+  width: 100%;
+  height: calc(150 * var(--u));
+  font-size: calc(60 * var(--u));
+  font-weight: 600;
+  border-radius: var(--radius-md);
+}
+.receipt-btn--accent {
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+.receipt-btn--ghost {
+  background: var(--color-bg-2);
+  color: var(--color-white);
+}
+.receipt-btn:focus-visible { outline-color: var(--color-white); }

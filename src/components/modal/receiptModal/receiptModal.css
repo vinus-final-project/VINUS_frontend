@@ -1,0 +1,95 @@
+/* ──────────────────────────────────────────────────────────────
+ * ReceiptModal.css — 영수증 받기(주문번호 안내) 모달
+ * 컬러 팔레트: #262626 / #FE8400 / #FFFFFF
+ *
+ * 부모(.kiosk-frame, position:relative) 안을 가득 덮는 오버레이.
+ * ────────────────────────────────────────────────────────────── */
+
+.receipt-modal {
+  position: fixed;                 /* viewport 전체를 덮음 */
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.55); /* 딤 처리 */
+}
+
+.rm-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 상단 네비 (딤 위라 다소 어둡게 보임) */
+.rm-nav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: rgba(51, 51, 51, 0.85);
+}
+.rm-navbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--color-white-pressed);
+  background: none;
+  border: 2px solid rgba(254, 132, 0, 0.55);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.rm-navbtn--accent {
+  background: rgba(254, 132, 0, 0.55);
+  border-color: rgba(254, 132, 0, 0.55);
+}
+.rm-navicon {
+  width: 22px;
+  height: 22px;
+}
+.rm-navbtn:focus-visible,
+.rm-navbtn--accent:focus-visible {
+  outline: 3px solid var(--color-white);
+  outline-offset: 2px;
+}
+
+/* 주문번호 카드 */
+.rm-center {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.rm-card {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  padding: 56px 28px;
+  background: var(--color-bg-2);
+  border: 3px solid var(--color-accent);
+  border-radius: 20px;
+}
+.rm-card-title {
+  margin: 0;
+  text-align: center;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--color-white);
+  word-break: keep-all;
+}
+.rm-card-number {
+  margin: 0;
+  font-size: 120px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-accent);
+}
