@@ -104,10 +104,16 @@
 }
 .menu-card:focus-visible { outline-color: var(--color-accent); }
 .menu-name {
+  /* 카드 폭(280u) 안에서 좌우 20u 씩 여백을 남기고, 긴 이름은
+     공백에서 우선 줄바꿈, 공백 없이 길면 문자 단위 줄바꿈으로 폴백. */
+  box-sizing: content-box;
+  max-width: calc(240 * var(--u));
+  padding: 0 calc(20 * var(--u));
   font-size: calc(50 * var(--u));
   font-weight: 400;
   line-height: 1.15;
   word-break: keep-all;
+  overflow-wrap: anywhere;              /* "더치아메리카노" 같은 공백 없는 긴 이름도 잘림 방지 */
 }
 .menu-price {
   font-size: calc(50 * var(--u));
