@@ -5,6 +5,9 @@ import {
   Navigate,
 } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
+import { SessionProvider } from "./hooks/useSession";
+import { WebSocketProvider } from "./hooks/useWebSocket";
+import SessionRouter from "./components/SessionRouter";
 import "./app.css";
 
 import Start from "./pages/start";
@@ -26,6 +29,8 @@ const RootLayout = () => {
   return (
     <div className="kiosk-stage">
       <div className="kiosk-frame">
+        {/* SessionResponse 수신 → 라우팅/cart 동기화 (렌더 없음) */}
+        <SessionRouter />
         <Outlet />
         {/* 전역 팝업/모달이 필요하면 여기에 배치 (예: <InterferencePopup />) */}
       </div>
@@ -52,9 +57,16 @@ const router = createBrowserRouter([
   },
 ]);
 
+/*  Provider 중첩 순서 주의:
+ *    WebSocketProvider 내부에서 useSession() 을 호출하므로
+ *    SessionProvider 가 반드시 바깥쪽에 위치해야 한다.                */
 const App = () => (
   <CartProvider>
-    <RouterProvider router={router} />
+    <SessionProvider>
+      <WebSocketProvider>
+        <RouterProvider router={router} />
+      </WebSocketProvider>
+    </SessionProvider>
   </CartProvider>
 );
 

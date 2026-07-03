@@ -1,13 +1,15 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdOutlineShoppingBasket } from "react-icons/md";
 import { FaCaretLeft, FaCaretRight } from "react-icons/fa";
 import Navbar from "../../components/navbar";
-import { CATEGORIES, MENUS } from "../../data/sampleData";
 import { ORDER_PAGE_SIZE as PAGE_SIZE, MAIN_TIME_LIMIT_SEC } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import { useCountdown } from "../../hooks/useCountdown";
 import useCart from "../../hooks/useCart";
+import useMenu from "../../hooks/useMenu";
+import useSession from "../../hooks/useSession";
+import useSessionApi from "../../hooks/useSessionApi";
 import "./order.css";
 
 export default function Order() {
@@ -16,6 +18,10 @@ export default function Order() {
   const [category, setCategory] = useState("전체");
   const [page, setPage] = useState(0);
 
+  // backend 에서 받아온 카테고리/메뉴 (마운트 시 fetch)
+  const [categories, setCategories] = useState([]); // ["전체", 카테고리명...]
+  const [allMenus, setAllMenus] = useState([]);     // [{ id, name, price, category }]
+
   // 자동 종료 타이머 (180초). 0 이 되면 시작 화면으로 복귀.
   const onTimeout = useCallback(() => navigate("/"), [navigate]);
   const seconds = useCountdown(MAIN_TIME_LIMIT_SEC, onTimeout);
@@ -23,9 +29,62 @@ export default function Order() {
   // 장바구니 합계 (footer summary 표시용)
   const { totalCount, totalPrice } = useCart();
 
+  // 메뉴 도메인 API hook
+  const { getCategories, getMenus } = useMenu();
+
+  // 세션: main 에서 저장한 order_type 으로 mount 시 세션 생성
+  const { order_type, session_id, applySessionResponse } = useSession();
+  const { createSession } = useSessionApi();
+  const sessionRequestedRef = useRef(false); // StrictMode 이중 mount / 재렌더 중복 호출 방지
+
+  /* ── 마운트 시 세션 생성 (1차 배포 흐름 3단계) ──────────
+   *    main 에서 order_type 선택됨 + 아직 session_id 없음 → POST /sessions
+   *    응답(SessionResponse)은 applySessionResponse 로 반영.
+   *    (SessionRouter 는 이미 /order 에 있으므로 추가 navigate 없음)      */
+  useEffect(() => {
+    if (!order_type || session_id || sessionRequestedRef.current) return;
+    sessionRequestedRef.current = true;
+    (async () => {
+      const res = await createSession(order_type);
+      if (res) applySessionResponse(res);
+      else sessionRequestedRef.current = false; // 실패 시 재시도 허용
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order_type, session_id]);
+
+  /* ── 마운트 시 카테고리 + 카테고리별 메뉴 병렬 fetch ─────
+   *    "전체" 가상 카테고리는 client 측에서만 사용 (filter 미적용 시 전체 노출)
+   *    응답 스키마: { categories:[{c_id,c_name}] }, { menus:[{m_id,c_id,m_name,m_price}] } */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const catRes = await getCategories();
+      const cats = catRes?.categories ?? [];
+      if (!alive) return;
+      setCategories(["전체", ...cats.map((c) => c.c_name)]);
+
+      // 각 카테고리별 메뉴 병렬 호출
+      const lists = await Promise.all(cats.map((c) => getMenus(c.c_id)));
+      if (!alive) return;
+      const merged = lists.flatMap((res, i) =>
+        (res?.menus ?? []).map((m) => ({
+          id: m.m_id,
+          name: m.m_name,
+          price: m.m_price,
+          category: cats[i].c_name,
+        }))
+      );
+      setAllMenus(merged);
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 선택된 카테고리로 메뉴 필터링 ("전체"면 전부)
   const menus =
-    category === "전체" ? MENUS : MENUS.filter((m) => m.category === category);
+    category === "전체" ? allMenus : allMenus.filter((m) => m.category === category);
   const totalPages = Math.max(1, Math.ceil(menus.length / PAGE_SIZE));
   const pageItems = menus.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
@@ -90,7 +149,7 @@ export default function Order() {
 
           {/* 카테고리: 가로 스크롤 (디저트까지 넘겨서 볼 수 있음) */}
           <div className="category-bar" role="tablist" aria-label="메뉴 카테고리">
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button
                 key={c}
                 role="tab"

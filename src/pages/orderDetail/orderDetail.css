@@ -197,9 +197,10 @@
   color: var(--color-white);
 }
 .paid-price {
+  margin-left: auto;                    /* 박스 내 오른쪽 끝 */
   font-size: calc(32 * var(--u));
   font-weight: 500;
-  color: var(--color-white);
+  color: var(--color-white);            /* 개별 옵션 가격은 흰색 (합계만 주황) */
 }
 
 /* +/- 스테퍼 */

@@ -73,12 +73,12 @@ export default function Cart() {
             <div className="cart-list" ref={listRef}>
               {items.map((item) => (
                 <div className="cart-item" key={item.id}>
-                  <span className="cart-name">{item.name}</span>
+                  <span className="cart-name">{item.m_name}</span>
 
                   <button
                     className="cart-remove-btn"
                     onClick={() => removeItem(item.id)}
-                    aria-label={`${item.name} 삭제`}
+                    aria-label={`${item.m_name} 삭제`}
                   >
                     ×
                   </button>
@@ -87,22 +87,22 @@ export default function Cart() {
                     <button
                       className="cart-qty-btn"
                       onClick={() => changeQuantity(item.id, -1)}
-                      aria-label={`${item.name} 수량 감소`}
+                      aria-label={`${item.m_name} 수량 감소`}
                     >
                       −
                     </button>
-                    <span className="cart-qty-count">{item.quantity}</span>
+                    <span className="cart-qty-count">{item.o_m_qty}</span>
                     <button
                       className="cart-qty-btn"
                       onClick={() => changeQuantity(item.id, +1)}
-                      aria-label={`${item.name} 수량 증가`}
+                      aria-label={`${item.m_name} 수량 증가`}
                     >
                       +
                     </button>
                   </div>
 
                   <span className="cart-price">
-                    {formatKRW(item.unitPrice * item.quantity)}
+                    {formatKRW(item.unitPrice * item.o_m_qty)}
                   </span>
                 </div>
               ))}

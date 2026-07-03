@@ -74,9 +74,8 @@ export default function Start() {
     if (pointerHoldingRef.current) cancelHold();
   };
 
-  /* 짧게 클릭 → alert */
+  /* 짧게 클릭은 무시 (3초 hold 만 유효) */
   const handleScreenClick = () => {
-    alert("화면");
     // TODO: 실제 동작 (예: 음성 안내 시작) 연결
   };
 

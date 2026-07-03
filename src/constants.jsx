@@ -23,3 +23,9 @@ export const AUTO_HOME_SEC = 5;
 
 /* cart / end: ▲▼ 한 번에 스크롤되는 양 (px, --u 곱은 추후 필요 시) */
 export const LIST_SCROLL_STEP = 230;
+
+/* 매장 정보 (임시 상수 — 추후 backend 세팅 API 로 교체 예정) */
+export const STORE_NAME = "가맹점명";
+
+/* receipt 임시 주문 번호 (추후 SessionResponse 또는 결제 응답으로 교체) */
+export const ORDER_NUMBER = 271;

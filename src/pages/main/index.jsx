@@ -1,26 +1,46 @@
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/navbar";
+import { STORE_NAME } from "../../constants";
+import useSession from "../../hooks/useSession";
 import "./main.css";
 
-import { STORE_NAME } from "../../data/sampleData";
-
+/* ──────────────────────────────────────────────────────────────
+ * Main — 매장/포장 선택
+ *
+ * 1차 배포 흐름 (REST-only, WebSocket 은 backend 완성 후 재개):
+ *   1) 매장/포장 선택 → order_type 만 저장 (세션 생성 X)
+ *   2) /order 로 navigate
+ *   3) order 페이지 mount 시 order_type 으로 세션 생성 API 호출
+ *
+ * order_type 매핑:
+ *   매장 → "STORE"  (backend OrderType enum)
+ *   포장 → "TAKEOUT"
+ *
+ * ⚠ WebSocket 재개 시:
+ *   아래 주석 처리된 useEffect(connect()) 를 다시 활성화하거나,
+ *   세션 생성 후 order.jsx 에서 connect(res.session_id) 를 호출하는
+ *   방식(더 자연스러움) 으로 되돌린다.
+ * ────────────────────────────────────────────────────────────── */
 export default function Main() {
   const navigate = useNavigate();
+  const { setOrderType } = useSession();
+
+  // TODO(WebSocket 재개): import useWebSocket + 아래 useEffect 되살리기
+  // const { connect } = useWebSocket();
+  // useEffect(() => { connect(); }, []);
 
   const handleCallStaff = () => {
     alert("직원호출");
     // TODO: 직원호출 API 요청
   };
 
-  const handleDineIn = () => {
-    // 매장: 주문 유형을 state로 전달하며 전체 메뉴로 이동
-    navigate("/order", { state: { orderType: "dineIn" } });
+  const selectOrderType = (order_type) => {
+    setOrderType(order_type); // 세션 생성은 order 페이지 mount 에서
+    navigate("/order");
   };
 
-  const handleTakeOut = () => {
-    // 포장: 주문 유형을 state로 전달하며 전체 메뉴로 이동
-    navigate("/order", { state: { orderType: "takeOut" } });
-  };
+  const handleDineIn = () => selectOrderType("STORE");
+  const handleTakeOut = () => selectOrderType("TAKEOUT");
 
   return (
     <>

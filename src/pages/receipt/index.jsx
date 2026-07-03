@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReceiptModal from "../../components/modal/ReceiptModal";
-import { ORDER_NUMBER } from "../../data/sampleData";
+import { ORDER_NUMBER } from "../../constants";
 import receiptPng from "../../assets/receipt.png";
 import "./receipt.css";
 

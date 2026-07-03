@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ORDER_ITEMS } from "../../data/sampleData";
 import { AUTO_HOME_SEC, LIST_SCROLL_STEP } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import useCart from "../../hooks/useCart";
@@ -11,14 +10,14 @@ export default function End() {
   const { lastOrder } = useCart();
 
   // pay 단계에서 placeOrder() 로 snapshot 된 lastOrder 를 end-item 표시 형식으로 변환.
-  // (직접 /end 진입 등으로 lastOrder 가 비어있다면 mock ORDER_ITEMS 로 fallback)
+  // lastOrder 가 비어있으면(직접 /end 진입 등) 빈 리스트로 렌더.
   const displayItems = useMemo(() => {
-    if (!lastOrder || lastOrder.length === 0) return ORDER_ITEMS;
+    if (!lastOrder || lastOrder.length === 0) return [];
     return lastOrder.map((it) => ({
       id: it.id,
-      name: it.name,
-      count: it.quantity,
-      price: it.unitPrice * it.quantity,
+      name: it.m_name,
+      count: it.o_m_qty,
+      price: it.unitPrice * it.o_m_qty,
     }));
   }, [lastOrder]);
 
