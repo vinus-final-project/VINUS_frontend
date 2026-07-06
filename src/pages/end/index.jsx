@@ -7,7 +7,7 @@ import "./end.css";
 
 export default function End() {
   const navigate = useNavigate();
-  const { lastOrder } = useCart();
+  const { lastOrder, clearCart } = useCart();
 
   // pay 단계에서 placeOrder() 로 snapshot 된 lastOrder 를 end-item 표시 형식으로 변환.
   // lastOrder 가 비어있으면(직접 /end 진입 등) 빈 리스트로 렌더.
@@ -24,15 +24,16 @@ export default function End() {
   const listRef = useRef(null); // 메뉴 리스트 내부 스크롤 영역
   const [seconds, setSeconds] = useState(AUTO_HOME_SEC);
 
-  // ── 자동 복귀 타이머: 0이 되면 메인 페이지로 ──────────────
+  // ── 자동 복귀 타이머: 0이 되면 장바구니/lastOrder 비우고 메인 페이지로 ──
   useEffect(() => {
     if (seconds <= 0) {
-      navigate("/"); // 메인 페이지로 이동
+      clearCart();      // items + lastOrder + sessionStorage 백업까지 정리
+      navigate("/");
       return;
     }
     const id = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [seconds, navigate]);
+  }, [seconds, navigate, clearCart]);
 
   // 메뉴 리스트 내부 상하 스크롤
   const scrollList = (dir) => {
@@ -40,7 +41,8 @@ export default function End() {
   };
 
   const handleHome = () => {
-    navigate("/"); // 메인 페이지로 이동
+    clearCart();        // "처음으로" 버튼 눌러 나가는 경우도 동일
+    navigate("/");
   };
 
   return (

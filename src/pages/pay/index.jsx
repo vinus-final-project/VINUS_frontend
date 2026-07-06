@@ -1,61 +1,138 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { ANONYMOUS } from "@tosspayments/tosspayments-sdk";
 import useCart from "../../hooks/useCart";
+import useSession from "../../hooks/useSession";
+import { getTossPayments } from "../../utils/toss";
 import "./pay.css";
 
 /* ──────────────────────────────────────────────────────────────
- * Pay — 결제 진행 페이지
+ * Pay — 결제 진행 페이지 (토스 결제창 호출 + 결과 분기)
  *
- * 명세: header / footer 없이, 오렌지 원(상단)과 안내문(하단) 2단 구성.
+ * 흐름
+ *   1) mount 시 URL query 의 result 파라미터 확인
+ *      - 없음         → 결제창 첫 진입. 토스 결제창 open (status = processing)
+ *      - "success"    → 결제 성공 리다이렉트 (status = done)
+ *      - "fail"       → 결제 실패 리다이렉트 (status = fail)
  *
- * 흐름:
- *   1) "processing"  — "결제 중입니다…" + 살짝 옅은 펄스 원
- *   2) 3초 후 "done" — "결제가 완료되었습니다!" + 진한 원
- *      ↳ 이 시점에 placeOrder() 호출 → 장바구니를 lastOrder 로 snapshot 한 뒤 비움
- *   3) 다시 3초 후   — /receipt 페이지로 이동
+ *   2) status 별 후속 처리
+ *      - processing   → 토스 결제창 뜬 상태, 사용자 인터랙션 대기
+ *      - done         → placeOrder() 후 1.5초 뒤 /receipt
+ *      - fail         → 1.5초 뒤 /payment 복귀
  *
- *   실제로는 백엔드 결제 API 응답을 기다려 setStatus("done") 으로 전환하고,
- *   그 후 다시 백엔드 후처리(영수증 발급 등) 응답을 받아 navigate("/receipt") 한다.
- *   아래 useEffect 안의 TODO 자리를 실제 fetch 호출로 교체하면 됨.
+ *   ※ successUrl / failUrl 을 /pay 로 지정하고 result query 로 구분하기
+ *     때문에 결제창 후 다시 이 페이지가 마운트되며 URL param 으로 결과 판단.
  * ────────────────────────────────────────────────────────────── */
 
 export default function Pay() {
   const navigate = useNavigate();
-  const { placeOrder } = useCart();
-  const [status, setStatus] = useState("processing");
+  const [params] = useSearchParams();
+  const { items, placeOrder } = useCart();
+  // 결제 금액은 backend SessionResponse.total_price 사용
+  const { session_id, total_price: totalPrice } = useSession();
 
-  /* ── 1단계: 결제 처리(processing) ─ 응답을 기다렸다가 done 으로 전환 ── */
+  // URL query result 로 초기 상태 결정
+  const initialResult = params.get("result"); // "success" | "fail" | null
+  const [status, setStatus] = useState(
+    initialResult === "success"
+      ? "done"
+      : initialResult === "fail"
+      ? "fail"
+      : "processing"
+  );
+
+  // 결제창 이중 호출 방지 (StrictMode 이중 mount 대응)
+  const openedRef = useRef(false);
+
+  /* ── URL 정리 — result 판독 후 즉시 /pay 로 replaceState ─
+   * 뒤로가기/재진입 시 이전 결과가 다시 판독되는 것을 방지.  */
   useEffect(() => {
-    let alive = true;
+    if (initialResult) {
+      window.history.replaceState({}, "", "/pay");
+    }
+  }, [initialResult]);
 
-    // TODO(실제): 백엔드 결제 라우트 호출 후 성공 응답을 받아 setStatus("done").
-    //   const res = await fetch("/api/pay", { method: "POST" });
-    //   if (alive && res.ok) setStatus("done");
+  /* ── 첫 진입 (result 없음) → 토스 결제창 open ────────── */
+  useEffect(() => {
+    if (initialResult) return; // 리다이렉트 복귀는 결제창 재호출 X
+    if (openedRef.current) return;
+    openedRef.current = true;
 
-    // 데모(엔드포인트 연결 전): 3초 후 자동으로 done 으로 전환
-    const id = setTimeout(() => alive && setStatus("done"), 3000);
-    return () => {
-      alive = false;
-      clearTimeout(id);
-    };
+    (async () => {
+      if (!totalPrice || totalPrice <= 0) {
+        console.error("[pay] 결제 금액 없음 — payment 로 복귀");
+        navigate("/payment");
+        return;
+      }
+      if (!session_id) {
+        console.error("[pay] session_id 없음 — 홈으로 복귀");
+        navigate("/");
+        return;
+      }
+
+      const orderId = `${session_id}-${Date.now()}`;
+      const firstName = items[0]?.m_name || "주문";
+      const orderName =
+        items.length > 1 ? `${firstName} 외 ${items.length - 1}건` : firstName;
+
+      const successUrl = `${window.location.origin}/pay?result=success`;
+      const failUrl = `${window.location.origin}/pay?result=fail`;
+
+      try {
+        const toss = await getTossPayments();
+        const payment = toss.payment({ customerKey: ANONYMOUS });
+        await payment.requestPayment({
+          method: "CARD",
+          amount: { currency: "KRW", value: totalPrice },
+          orderId,
+          orderName,
+          successUrl,
+          failUrl,
+          card: {
+            useEscrow: false,
+            flowMode: "DEFAULT",
+            useCardPoint: false,
+            useAppCardOnly: false,
+          },
+        });
+        // requestPayment 성공 시 브라우저가 successUrl 로 리다이렉트되므로
+        // 아래 코드는 실행되지 않음.
+      } catch (err) {
+        /* 에러 종류
+         *   USER_CANCEL — 사용자가 결제창을 닫음 (그냥 payment 복귀)
+         *   그 외        — SDK/네트워크 오류 (fail 상태 표시 후 복귀) */
+        console.error(
+          "[pay] 결제창 오류 code=",
+          err?.code,
+          "message=",
+          err?.message,
+          err
+        );
+        if (err?.code === "USER_CANCEL") {
+          // 사용자가 결제창을 닫은 것 — 조용히 payment 로 복귀
+          navigate("/payment");
+        } else {
+          setStatus("fail");
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── 2단계: 결제 완료(done) ─ 장바구니 commit + receipt 페이지로 이동 ── */
+  /* ── done: placeOrder + 1.5초 후 receipt ──────────── */
   useEffect(() => {
     if (status !== "done") return;
-
-    // 결제 완료 → 현재 장바구니를 lastOrder 로 snapshot (end 페이지에서 표시),
-    //               동시에 장바구니 비움 (다음 주문 대비)
     placeOrder();
-
-    // TODO(실제): 백엔드 후처리(영수증 발급 등) 응답을 받은 뒤 navigate("/receipt").
-    //   const res = await fetch("/api/pay/finalize");
-    //   if (res.ok) navigate("/receipt");
-
-    // 데모: 3초 후 자동으로 영수증 선택 페이지로 이동
-    const id = setTimeout(() => navigate("/receipt"), 3000);
+    const id = setTimeout(() => navigate("/receipt"), 1500);
     return () => clearTimeout(id);
   }, [status, navigate, placeOrder]);
+
+  /* ── fail: 1.5초 후 payment 복귀 ──────────────────── */
+  useEffect(() => {
+    if (status !== "fail") return;
+    const id = setTimeout(() => navigate("/payment"), 1500);
+    return () => clearTimeout(id);
+  }, [status, navigate]);
 
   return (
     <div className="pay-body">
@@ -64,17 +141,25 @@ export default function Pay() {
         aria-hidden="true"
       />
       <p className="pay-message" role="status" aria-live="polite">
-        {status === "processing" ? (
+        {status === "processing" && (
           <>
             결제 중입니다...
             <br />
             잠시만 기다려주세요
           </>
-        ) : (
+        )}
+        {status === "done" && (
           <>
             결제가 완료되었습니다!
             <br />
             카드를 제거해주세요
+          </>
+        )}
+        {status === "fail" && (
+          <>
+            결제에 실패했습니다
+            <br />
+            결제 화면으로 돌아갑니다
           </>
         )}
       </p>

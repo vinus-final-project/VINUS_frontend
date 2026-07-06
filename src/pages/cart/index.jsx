@@ -1,10 +1,12 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import { LIST_SCROLL_STEP, MAIN_TIME_LIMIT_SEC } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import { useCountdown } from "../../hooks/useCountdown";
 import useCart from "../../hooks/useCart";
+import useSession from "../../hooks/useSession";
+import usePayment from "../../hooks/usePayment";
 import "./cart.css";
 
 export default function Cart() {
@@ -18,6 +20,11 @@ export default function Cart() {
 
   // 장바구니 전역 상태
   const { items, totalCount, totalPrice, changeQuantity, removeItem, clearCart } = useCart();
+
+  // 세션 / 결제 API
+  const { session_id, applySessionResponse } = useSession();
+  const { startPayment } = usePayment();
+  const [busy, setBusy] = useState(false);
 
   /* ── 핸들러: 클릭 위치 확인용 alert + 이동은 navigate 주석 ── */
   const handleHome = () => {
@@ -37,8 +44,29 @@ export default function Cart() {
     listRef.current?.scrollBy({ top: dir * LIST_SCROLL_STEP, behavior: "smooth" });
   };
 
-  const handlePay = () => {
-    navigate("/payment"); // 결제 방법 선택 페이지로 이동
+  /* 결제 클릭 — POST /payments/start 로 세션을 PAYMENT 상태로 전이.
+   *   응답(SessionResponse)을 useSession 에 반영한 뒤 결제 방법 선택 페이지로 이동.
+   *   backend/app/routers/payment.py 참조.                                    */
+  const handlePay = async () => {
+    if (busy) return;
+    if (items.length === 0) return;
+    if (!session_id) {
+      alert("세션이 만료되었습니다. 처음부터 다시 시도해주세요.");
+      navigate("/");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await startPayment(session_id);
+      if (!res) {
+        alert("결제 시작에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        return;
+      }
+      applySessionResponse(res);
+      navigate("/payment");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -136,7 +164,12 @@ export default function Cart() {
           >
             돌아가기
           </button>
-          <button className="pay-btn" onClick={handlePay} aria-label="결제하기">
+          <button
+            className="pay-btn"
+            onClick={handlePay}
+            disabled={busy || items.length === 0}
+            aria-label="결제하기"
+          >
             결제
           </button>
         </footer>

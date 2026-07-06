@@ -1,4 +1,28 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+
+/*  sessionStorage 백업 키.
+ *
+ *  토스 결제창 successUrl / failUrl 리다이렉트는 브라우저 페이지 전체 리로드라
+ *  React Context state 가 초기화된다. 결제 성공 후 end 페이지에서 lastOrder 를
+ *  표시하려면 items 와 lastOrder 를 브라우저 세션 스토리지에 백업해두었다가
+ *  App remount 시 복구해야 한다.
+ *
+ *  sessionStorage 를 쓰는 이유:
+ *    - localStorage 는 브라우저를 완전히 닫아도 유지 → 다음 손님에게 노출 위험
+ *    - sessionStorage 는 탭/앱 세션 종료 시 자동 삭제 → 키오스크 특성에 적합    */
+const SS_ITEMS_KEY = "vinus.cart.items";
+const SS_LAST_KEY = "vinus.cart.lastOrder";
+
+const readSS = (key) => {
+    try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : null;
+    } catch {
+        return null;
+    }
+};
 
 /* ──────────────────────────────────────────────────────────────
  * useCart — 장바구니 전역 상태 (Context + Custom Hook)
@@ -43,8 +67,21 @@ const CartContext = createContext(null);
 const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState([]);
-  const [lastOrder, setLastOrder] = useState([]);
+  // 초기값은 sessionStorage 에서 복구 (없으면 빈 배열)
+  const [items, setItems] = useState(() => readSS(SS_ITEMS_KEY) ?? []);
+  const [lastOrder, setLastOrder] = useState(() => readSS(SS_LAST_KEY) ?? []);
+
+  // 변경 시 sessionStorage 로 백업
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SS_ITEMS_KEY, JSON.stringify(items));
+    } catch { /* quota/private mode 등 무시 */ }
+  }, [items]);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SS_LAST_KEY, JSON.stringify(lastOrder));
+    } catch { /* ignore */ }
+  }, [lastOrder]);
 
   const addItem = useCallback((item) => {
     setItems((prev) => [...prev, { ...item, id: item.id ?? genId() }]);
@@ -65,7 +102,13 @@ export const CartProvider = ({ children }) => {
     );
   }, []);
 
-  const clearCart = useCallback(() => setItems([]), []);
+  /*  clearCart — items 뿐 아니라 lastOrder 도 함께 초기화.
+   *  end 페이지가 홈으로 이동하기 직전에 호출하여 다음 세션이 이전 주문
+   *  내역을 보지 못하도록 한다. sessionStorage 백업도 useEffect 로 동기화됨.  */
+  const clearCart = useCallback(() => {
+    setItems([]);
+    setLastOrder([]);
+  }, []);
 
   /* 서버 SessionResponse.cart → 로컬 items 동기화 (서버가 SoT).
    * backend CartItem 스키마가 아직 미확정이라 필드명을 관대하게 매핑.
@@ -90,11 +133,13 @@ export const CartProvider = ({ children }) => {
     );
   }, []);
 
+  /*  주문 확정 — 현재 items 를 lastOrder 로 snapshot 만 저장한다.
+   *  장바구니 items 는 그대로 유지 (end 페이지에서 표시하기 위해).
+   *  실제 clearCart 는 end 페이지가 홈으로 이동하기 직전에 호출한다.  */
   const placeOrder = useCallback(() => {
     setItems((prev) => {
-      // 현재 items 를 snapshot 으로
       setLastOrder(prev);
-      return [];
+      return prev;
     });
   }, []);
 

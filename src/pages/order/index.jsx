@@ -10,6 +10,7 @@ import useCart from "../../hooks/useCart";
 import useMenu from "../../hooks/useMenu";
 import useSession from "../../hooks/useSession";
 import useSessionApi from "../../hooks/useSessionApi";
+import useOrder from "../../hooks/useOrder";
 import "./order.css";
 
 export default function Order() {
@@ -35,11 +36,14 @@ export default function Order() {
   // 세션: main 에서 저장한 order_type 으로 mount 시 세션 생성
   const { order_type, session_id, applySessionResponse } = useSession();
   const { createSession } = useSessionApi();
+  const { createOrder } = useOrder();
   const sessionRequestedRef = useRef(false); // StrictMode 이중 mount / 재렌더 중복 호출 방지
+  const [menuBusy, setMenuBusy] = useState(false);
 
-  /* ── 마운트 시 세션 생성 (1차 배포 흐름 3단계) ──────────
+  /* ── 마운트 시 세션 생성 (터치를 통한 session_id 생성) ────
    *    main 에서 order_type 선택됨 + 아직 session_id 없음 → POST /sessions
    *    응답(SessionResponse)은 applySessionResponse 로 반영.
+   *    WebSocket 은 main 페이지에서 이미 연결됨 (session_id 없이).
    *    (SessionRouter 는 이미 /order 에 있으므로 추가 navigate 없음)      */
   useEffect(() => {
     if (!order_type || session_id || sessionRequestedRef.current) return;
@@ -116,8 +120,25 @@ export default function Order() {
     setPage(0); // 카테고리를 바꾸면 첫 페이지로
   };
 
-  const handleMenu = (menu) => {
-    navigate(`/menu/${menu.id}`); // 메뉴 상세 페이지로 이동
+  /* 메뉴 카드 클릭 → POST /orders (SELECT_MENU 이벤트)
+   *   backend가 order_item 을 생성하고 current_menu 를 SessionResponse에 담아
+   *   반환. 응답을 useSession 에 반영한 뒤 orderDetail 로 이동.                */
+  const handleMenu = async (menu) => {
+    if (menuBusy) return;
+    if (!session_id) {
+      alert("세션이 만료되었습니다. 처음부터 다시 시도해주세요.");
+      navigate("/");
+      return;
+    }
+    setMenuBusy(true);
+    try {
+      const res = await createOrder(session_id, menu.id);
+      if (res) applySessionResponse(res);
+      // res 실패해도 화면 이동은 시도 (backend 미완성 상황 대비)
+      navigate(`/menu/${menu.id}`);
+    } finally {
+      setMenuBusy(false);
+    }
   };
 
   const handlePrev = () => {

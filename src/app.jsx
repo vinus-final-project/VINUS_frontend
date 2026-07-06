@@ -49,7 +49,7 @@ const router = createBrowserRouter([
       { path: "menu/:menuId", element: <OrderDetail /> }, // 메뉴 상세
       { path: "cart", element: <Cart /> }, // 장바구니
       { path: "payment", element: <Payment /> }, // 결제 방법 선택
-      { path: "pay", element: <Pay /> }, // 결제 진행도
+      { path: "pay", element: <Pay /> }, // 결제 진행도 (successUrl/failUrl 공용)
       { path: "receipt", element: <Receipt /> }, // 영수증 수령
       { path: "end", element: <End /> }, // 결제 내역(완료)
       { path: "*", element: <Navigate to="/" replace /> }, // 그 외 → 메인

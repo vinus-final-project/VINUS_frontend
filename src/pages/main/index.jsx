@@ -1,33 +1,38 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import { STORE_NAME } from "../../constants";
 import useSession from "../../hooks/useSession";
+import useWebSocket from "../../hooks/useWebSocket";
 import "./main.css";
 
 /* ──────────────────────────────────────────────────────────────
  * Main — 매장/포장 선택
  *
- * 1차 배포 흐름 (REST-only, WebSocket 은 backend 완성 후 재개):
- *   1) 매장/포장 선택 → order_type 만 저장 (세션 생성 X)
- *   2) /order 로 navigate
- *   3) order 페이지 mount 시 order_type 으로 세션 생성 API 호출
+ * WebSocket 연결 시점 = 이 페이지 mount 직후 (start 3초 hold 후 진입).
+ * 아직 session_id 가 없는 상태로 연결한다.
+ *
+ * session_id 생성 두 갈래:
+ *   <터치>  매장/포장 선택 → order 페이지 mount 시 POST /sessions
+ *           → SessionResponse 로 session_id 수신
+ *   <음성>  "매장이요" 첫 발화가 session_id 없이 WS 로 전송
+ *           → backend 가 세션 생성 + WS 매니저가 연결↔session_id 매핑
+ *           → SessionResponse 에 session_id 실려 수신
  *
  * order_type 매핑:
  *   매장 → "STORE"  (backend OrderType enum)
  *   포장 → "TAKEOUT"
- *
- * ⚠ WebSocket 재개 시:
- *   아래 주석 처리된 useEffect(connect()) 를 다시 활성화하거나,
- *   세션 생성 후 order.jsx 에서 connect(res.session_id) 를 호출하는
- *   방식(더 자연스러움) 으로 되돌린다.
  * ────────────────────────────────────────────────────────────── */
 export default function Main() {
   const navigate = useNavigate();
   const { setOrderType } = useSession();
+  const { connect } = useWebSocket();
 
-  // TODO(WebSocket 재개): import useWebSocket + 아래 useEffect 되살리기
-  // const { connect } = useWebSocket();
-  // useEffect(() => { connect(); }, []);
+  /* mount 즉시 WebSocket 연결 (session_id 없이) */
+  useEffect(() => {
+    connect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCallStaff = () => {
     alert("직원호출");
