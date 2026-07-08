@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
-import { MAIN_TIME_LIMIT_SEC } from "../../constants";
 import { formatKRW } from "../../utils/format";
-import { useCountdown } from "../../hooks/useCountdown";
-import useCart from "../../hooks/useCart";
+import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useMenu from "../../hooks/useMenu";
 import useSession from "../../hooks/useSession";
 import useOrder from "../../hooks/useOrder";
@@ -13,18 +11,25 @@ import "./orderDetail.css";
 /* ──────────────────────────────────────────────────────────────
  * OrderDetail — 메뉴 상세 페이지 (backend 실시간 동기화)
  *
- * 페이지의 모든 상호작용(수량, 옵션 선택/스텝퍼)은 backend 로도 즉시
- * 반영한다 (POST /orders/quantity, /orders/option).
- *   - 증가/선택 계열은 backend 호출 O
- *   - 감소/해제 계열은 backend 명세에 없어 로컬만 반영
- *     (완료 시점 최종 상태를 backend가 신뢰)
+ * 페이지의 모든 상호작용(수량, 옵션 선택/스텝퍼)은 backend 로도 즉시 반영.
+ *   - 옵션 추가(+1)         → POST /orders/option        (SELECT_OPTION)
+ *   - 옵션 해제/감소(-1)    → POST /orders/option/remove (DESELECT_OPTION)
+ *   - 수량 지정             → POST /orders/quantity      (SET_QUANTITY)
+ *
+ * ※ backend /orders/option 은 토글이 아니라 add-only. 해제/감소는 명시적으로
+ *   /orders/option/remove 를 호출해야 selected_options 에서 빠진다.
  *
  * UI 렌더는 useSession.current_menu 우선.
  * ────────────────────────────────────────────────────────────── */
 
 const DEFAULT_DESC = "원하시는 옵션을 선택한 뒤 장바구니에 담아주세요.";
-const STEPPER_MAX = 10;
 
+/* 옵션 그룹 위젯 분류 — og_name 매칭 (UI 원본 유지)
+ *   샷/휘핑/펄 → STEPPER_GROUP  (그룹 대표 스텝퍼 하나)
+ *   시럽       → STEPPER_OPT    (옵션별 스텝퍼)
+ *   그 외      → BUTTON         (chip 토글)
+ *
+ * 필수/상한 판정은 og.og_required / og.og_min / og.og_max 로 분리 처리.       */
 const groupWidget = (og) => {
   const name = og?.og_name || "";
   if (name.includes("샷") || name.includes("휘핑") || name.includes("펄")) {
@@ -34,14 +39,15 @@ const groupWidget = (og) => {
   return "BUTTON";
 };
 const isStepper = (og) => groupWidget(og) !== "BUTTON";
+const groupStepperTotal = (og, stepperCounts) =>
+  (og?.options || []).reduce((s, op) => s + (stepperCounts[op.op_id] || 0), 0);
 
 export default function OrderDetail() {
   const navigate = useNavigate();
   const { menuId } = useParams();
-  const { addItem } = useCart();
   const { getMenuDetail } = useMenu();
-  const { current_menu, session_id, applySessionResponse } = useSession();
-  const { setQuantity: apiSetQuantity, selectOption, completeOrder } = useOrder();
+  const { current_menu, order_item, session_id, applySessionResponse } = useSession();
+  const { setQuantity: apiSetQuantity, selectOption, deselectOption, cancelOrder, completeOrder } = useOrder();
 
   // backend current_menu 우선, 없으면 GET /menus/{id} fallback
   const [menu, setMenu] = useState(current_menu);
@@ -55,8 +61,24 @@ export default function OrderDetail() {
   // API 호출 진행 상태 — 중복 클릭 방지
   const [busy, setBusy] = useState(false);
 
+  // 세션 공유 카운트다운 (order/orderDetail/cart 공용)
   const onTimeout = useCallback(() => navigate("/"), [navigate]);
-  const seconds = useCountdown(MAIN_TIME_LIMIT_SEC, onTimeout);
+  const seconds = useSessionCountdown(onTimeout);
+
+  /* order_item 소멸 감지 — 취소/제거 시 자동 /order 이동.
+   *   초기 진입엔 order_item 이 null 일 수 있으므로 "한 번이라도 있었는가"
+   *   플래그(hadItemRef)로 방어. 이후 다시 null 이 되면 그때 이동.         */
+  const hadItemRef = useRef(false);
+  useEffect(() => {
+    if (order_item?.m_id) {
+      hadItemRef.current = true;
+      return;
+    }
+    if (hadItemRef.current && !order_item) {
+      hadItemRef.current = false; // 리셋
+      navigate("/order");
+    }
+  }, [order_item, navigate]);
 
   /* ── 메뉴 로드: current_menu 우선, 없으면 REST fallback ── */
   useEffect(() => {
@@ -116,14 +138,24 @@ export default function OrderDetail() {
   const handleHome = () => navigate("/");
   const handleCallStaff = () => alert("직원호출");
 
-  /* selectOption backend 호출 도우미
-   *   응답이 오면 applySessionResponse 로 상태 반영.
-   *   실패 시엔 로컬 상태만 그대로 두고 console 로그.               */
+  /* selectOption(+1) / deselectOption(-1) backend 호출 도우미
+   *   응답이 오면 applySessionResponse 로 상태 반영.               */
   const callSelectOption = async (op_id) => {
     if (!session_id) return;
     setBusy(true);
     try {
       const res = await selectOption(session_id, op_id);
+      if (res) applySessionResponse(res);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const callDeselectOption = async (op_id) => {
+    if (!session_id) return;
+    setBusy(true);
+    try {
+      const res = await deselectOption(session_id, op_id);
       if (res) applySessionResponse(res);
     } finally {
       setBusy(false);
@@ -143,44 +175,61 @@ export default function OrderDetail() {
   };
 
   /* 버튼(chip) 그룹
-   *   - 선택 시: 로컬 반영 + POST /orders/option
-   *   - 해제 시: 로컬만 반영 (backend 명세에 옵션 제거 없음)          */
+   *   - 이미 선택된 chip 재클릭 → DESELECT_OPTION (/orders/option/remove)
+   *   - 새 chip 선택           → SELECT_OPTION   (/orders/option)
+   *   단일선택(og_max=1) 그룹에서 다른 chip 클릭 시엔 backend가 자동 교체 하므로
+   *   프론트는 이전 선택을 로컬에서만 지우고 새 op_id 로 SELECT_OPTION 만 호출.  */
   const toggleButtonOption = async (og, op) => {
     if (busy) return;
     const cur = selectedButtons[og.og_id] || [];
     const isSelected = cur.includes(op.op_id);
+    const isSingle = (og.og_max ?? 1) <= 1;
 
-    if (isSelected) {
-      // 해제 — 로컬만
-      setSelectedButtons((prev) => ({
-        ...prev,
-        [og.og_id]: (prev[og.og_id] || []).filter((id) => id !== op.op_id),
-      }));
-      return;
-    }
-
-    // 선택 — 로컬 즉시 반영 후 backend 호출
+    // 로컬 상태 즉시 반영 (optimistic)
     setSelectedButtons((prev) => {
       const c = prev[og.og_id] || [];
-      if ((og.og_max ?? 1) <= 1) return { ...prev, [og.og_id]: [op.op_id] };
+      if (isSelected) {
+        return { ...prev, [og.og_id]: c.filter((id) => id !== op.op_id) };
+      }
+      if (isSingle) return { ...prev, [og.og_id]: [op.op_id] };
       if (c.length >= og.og_max) return prev;
       return { ...prev, [og.og_id]: [...c, op.op_id] };
     });
-    await callSelectOption(op.op_id);
+
+    // backend 호출 분기
+    if (isSelected) {
+      await callDeselectOption(op.op_id);
+    } else {
+      // 새 선택 — 단일선택 그룹은 backend가 이전 op 를 교체 처리
+      await callSelectOption(op.op_id);
+    }
   };
 
-  /* 스텝퍼 (STEPPER_OPT / STEPPER_GROUP 공통)
-   *   - 증가: 로컬 +1 + POST /orders/option (매번 op_id 추가)
-   *   - 감소: 로컬 -1 (backend 명세 없음)                                */
-  const changeStepper = async (op_id, delta) => {
+  /* 스텝퍼 (og_max >= 2 그룹)
+   *   + 버튼 → SELECT_OPTION  (/orders/option)
+   *   - 버튼 → DESELECT_OPTION(/orders/option/remove)
+   *   상한: 그룹 내 모든 옵션 카운트의 합이 og.og_max 이하.                 */
+  const changeStepper = async (og, op_id, delta) => {
     if (busy) return;
     const cur = stepperCounts[op_id] || 0;
-    const next = Math.max(0, Math.min(STEPPER_MAX, cur + delta));
-    if (next === cur) return;
 
+    if (delta > 0) {
+      // og_max 그룹 합계 상한 방어
+      const groupTotal = groupStepperTotal(og, stepperCounts);
+      if (groupTotal >= (og.og_max ?? 1)) return;
+    } else if (cur <= 0) {
+      return;
+    }
+
+    const next = cur + delta;
+    // 로컬 즉시 반영 (optimistic)
     setStepperCounts((prev) => ({ ...prev, [op_id]: next }));
+
+    // +/- 에 따라 backend endpoint 분기
     if (delta > 0) {
       await callSelectOption(op_id);
+    } else {
+      await callDeselectOption(op_id);
     }
   };
 
@@ -197,7 +246,15 @@ export default function OrderDetail() {
     await callSetQuantity(next);
   };
 
-  const handleCancel = () => navigate("/order");
+  /* 취소 버튼 — backend CANCEL_ORDER_ITEM 호출 후 /order 로 복귀.
+   *   session이 있을 때만 호출(직접 진입 등 방어).                         */
+  const handleCancel = async () => {
+    if (session_id) {
+      const res = await cancelOrder(session_id);
+      if (res) applySessionResponse(res);
+    }
+    navigate("/order");
+  };
 
   const handleConfirm = async () => {
     if (!menu) return;
@@ -223,52 +280,33 @@ export default function OrderDetail() {
       }
     }
 
-    // 옵션 배열 구성 (orderMenuOptions 정합)
-    const options = [];
-    Object.values(selectedButtons).forEach((opIds) => {
-      opIds.forEach((opId) => {
-        const found = findOp(opId);
-        if (!found) return;
-        options.push({
-          op_id: found.op.op_id,
-          op_name: found.op.op_name,
-          op_price: found.op.op_price,
-          og_id: found.og.og_id,
-          og_name: found.og.og_name,
-        });
-      });
-    });
-    Object.entries(stepperCounts).forEach(([opIdStr, count]) => {
-      if (!count) return;
-      const found = findOp(Number(opIdStr));
-      if (!found) return;
-      for (let i = 0; i < count; i += 1) {
-        options.push({
-          op_id: found.op.op_id,
-          op_name: found.op.op_name,
-          op_price: found.op.op_price,
-          og_id: found.og.og_id,
-          og_name: found.og.og_name,
-        });
-      }
-    });
-
-    // 로컬 cart 반영
-    addItem({
-      m_id: menu.m_id,
-      m_name: menu.m_name,
-      m_price: menu.m_price,
-      o_m_qty: quantity,
-      options,
-      unitPrice,
-    });
-
-    // backend에 담기 요청 — POST /orders/complete
-    if (session_id) {
-      const res = await completeOrder(session_id);
-      if (res) applySessionResponse(res);
+    /* backend 검증 우선 — POST /orders/complete
+     *   응답 SessionResponse.cart 로 로컬 items 가 자동 반영됨(useCart 는
+     *   session.cart 파생). response_type === "ERROR" 이면 alert 후 return. */
+    if (!session_id) {
+      alert("세션이 만료되었습니다. 처음부터 다시 시도해주세요.");
+      navigate("/");
+      return;
     }
 
+    setBusy(true);
+    let res = null;
+    try {
+      res = await completeOrder(session_id);
+    } finally {
+      setBusy(false);
+    }
+    if (!res) {
+      alert("장바구니 담기에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+    if (res.response_type === "ERROR") {
+      const msg = res.message || res.error_code || "장바구니에 담을 수 없습니다.";
+      alert(msg);
+      applySessionResponse(res);
+      return;
+    }
+    applySessionResponse(res);
     navigate("/order");
   };
 
@@ -309,46 +347,55 @@ export default function OrderDetail() {
     );
   };
 
-  const renderOptStepperBody = (og) => (
-    <div className="acc-scroll-list">
-      {(og.options || []).map((op, idx) => {
-        const count = stepperCounts[op.op_id] || 0;
-        return (
-          <div className="paid-item" key={op.op_id}>
-            <div className="paid-item-top">
-              <span className="paid-name">{op.op_name}</span>
-              <span className="paid-price">{formatKRW(op.op_price)}</span>
+  /* 옵션별 스텝퍼 (시럽 처럼 그룹 내 옵션이 여러 개)
+   *   그룹 합계 상한 = og.og_max. 도달 시 그룹 내 모든 + 버튼 disabled.     */
+  const renderOptStepperBody = (og) => {
+    const groupTotal = groupStepperTotal(og, stepperCounts);
+    const canAdd = groupTotal < (og.og_max ?? 1);
+    return (
+      <div className="acc-scroll-list">
+        {(og.options || []).map((op, idx) => {
+          const count = stepperCounts[op.op_id] || 0;
+          return (
+            <div className="paid-item" key={op.op_id}>
+              <div className="paid-item-top">
+                <span className="paid-name">{op.op_name}</span>
+                <span className="paid-price">{formatKRW(op.op_price)}</span>
+              </div>
+              <div className="stepper">
+                <button
+                  className="step-btn"
+                  disabled={busy || count <= 0}
+                  onClick={() => changeStepper(og, op.op_id, -1)}
+                  aria-label={`${op.op_name} 감소`}
+                >
+                  −
+                </button>
+                <span className="step-count">{count}</span>
+                <button
+                  className="step-btn"
+                  disabled={busy || !canAdd}
+                  onClick={() => changeStepper(og, op.op_id, 1)}
+                  aria-label={`${op.op_name} 증가`}
+                >
+                  +
+                </button>
+              </div>
+              {idx < (og.options.length - 1) && <hr className="opt-divider" />}
             </div>
-            <div className="stepper">
-              <button
-                className="step-btn"
-                disabled={busy}
-                onClick={() => changeStepper(op.op_id, -1)}
-                aria-label={`${op.op_name} 감소`}
-              >
-                −
-              </button>
-              <span className="step-count">{count}</span>
-              <button
-                className="step-btn"
-                disabled={busy}
-                onClick={() => changeStepper(op.op_id, 1)}
-                aria-label={`${op.op_name} 증가`}
-              >
-                +
-              </button>
-            </div>
-            {idx < (og.options.length - 1) && <hr className="opt-divider" />}
-          </div>
-        );
-      })}
-    </div>
-  );
+          );
+        })}
+      </div>
+    );
+  };
 
+  /* 그룹 대표 스텝퍼 (샷/휘핑/펄 처럼 그룹 대표 하나만 표시)
+   *   상한 = og.og_max (baseOp 카운트 기준).                                */
   const renderGroupStepperBody = (og) => {
     const baseOp = og.options?.[0];
     if (!baseOp) return null;
     const count = stepperCounts[baseOp.op_id] || 0;
+    const canAdd = count < (og.og_max ?? 1);
     return (
       <div className="acc-scroll-list">
         <div className="paid-item">
@@ -359,8 +406,8 @@ export default function OrderDetail() {
           <div className="stepper">
             <button
               className="step-btn"
-              disabled={busy}
-              onClick={() => changeStepper(baseOp.op_id, -1)}
+              disabled={busy || count <= 0}
+              onClick={() => changeStepper(og, baseOp.op_id, -1)}
               aria-label={`${og.og_name} 감소`}
             >
               −
@@ -368,8 +415,8 @@ export default function OrderDetail() {
             <span className="step-count">{count}</span>
             <button
               className="step-btn"
-              disabled={busy}
-              onClick={() => changeStepper(baseOp.op_id, 1)}
+              disabled={busy || !canAdd}
+              onClick={() => changeStepper(og, baseOp.op_id, 1)}
               aria-label={`${og.og_name} 증가`}
             >
               +

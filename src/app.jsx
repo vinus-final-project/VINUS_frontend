@@ -58,16 +58,17 @@ const router = createBrowserRouter([
 ]);
 
 /*  Provider 중첩 순서 주의:
- *    WebSocketProvider 내부에서 useSession() 을 호출하므로
- *    SessionProvider 가 반드시 바깥쪽에 위치해야 한다.                */
+ *    ▸ WebSocketProvider 는 useSession() 을 호출 → SessionProvider 안쪽
+ *    ▸ CartProvider  는 useSession() + useCartApi() 를 호출 → SessionProvider 안쪽
+ *    ▸ 따라서 SessionProvider 가 최상위                                       */
 const App = () => (
-  <CartProvider>
-    <SessionProvider>
-      <WebSocketProvider>
+  <SessionProvider>
+    <WebSocketProvider>
+      <CartProvider>
         <RouterProvider router={router} />
-      </WebSocketProvider>
-    </SessionProvider>
-  </CartProvider>
+      </CartProvider>
+    </WebSocketProvider>
+  </SessionProvider>
 );
 
 export default App;

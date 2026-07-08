@@ -5,26 +5,26 @@ import api from "../utils/api";
  * usePayment — 토스페이먼츠 결제 도메인 API hook
  *
  * 결제 전체 흐름
- *   1) payment 페이지에서 tossPayments.requestPayment("CARD", ...) 호출
- *      → 토스 결제창 → 사용자가 카드 정보 입력 → successUrl 리다이렉트
- *   2) /success 페이지에서 URL query 로 paymentKey/orderId/amount 파싱
- *   3) registerPayment({ session_id, payment_key, order_id })
- *      → backend DB 의 pa_key 필드에 토스 영수증 매핑
- *   4) confirmPayment({ session_id, amount })
+ *   1) cart 결제 버튼 → startPayment(session_id)
+ *      → backend START_PAYMENT 이벤트 (ORDERING → PAYMENT) → SessionResponse
+ *   2) payment 페이지 → /pay → tossPayments.requestPayment → 결제창
+ *      → successUrl(/pay?result=success) 로 리다이렉트
+ *   3) confirmPayment({ session_id, order_id, payment_key, amount })
  *      → backend 가 시크릿 키로 토스 서버에 최종 승인 요청 (위변조 검증)
- *      → { success: true } 응답 시 결제 완료
+ *      → PaymentConfirmResponse
  *
  * Endpoints (backend/app/routers/payment.py)
- *   POST /payments/register  body: { session_id, payment_key, order_id }
- *                            response: 성공/실패
- *   POST /payments/confirm   body: { session_id, amount }
- *                            response: { success: bool }
+ *   POST /payments/start     body: { session_id }
+ *                            response: SessionResponse
+ *   POST /payments/cancel    body: { session_id }
+ *                            response: SessionResponse (PAYMENT_CANCEL → ORDERING)
+ *   POST /payments/confirm   body: PaymentConfirmRequest
+ *                            response: PaymentConfirmResponse
  *
  * 사용 예
- *   const { registerPayment, confirmPayment, error } = usePayment();
- *   await registerPayment({ session_id, payment_key, order_id });
- *   const res = await confirmPayment({ session_id, amount });
- *   if (res?.success) navigate("/receipt");
+ *   const { startPayment, cancelPayment, confirmPayment } = usePayment();
+ *   const res = await cancelPayment(session_id);
+ *   if (res) applySessionResponse(res);
  * ────────────────────────────────────────────────────────────── */
 
 const usePayment = () => {
@@ -51,33 +51,37 @@ const usePayment = () => {
         }
     };
 
-    // ── 1) 결제 정보 등록 (토스 영수증 → DB 매핑) ─────────────
-    const registerPayment = async ({ session_id, payment_key, order_id }) => {
+    // ── 결제 취소 (PAYMENT → ORDERING) ──────────────────────
+    //   backend/app/routers/payment.py 의 POST /payments/cancel
+    //   body: { session_id }, response: SessionResponse (PAYMENT_CANCEL)
+    //   payment 페이지의 "취소" 버튼 클릭 시 호출 → cart 페이지 복귀.
+    const cancelPayment = async (session_id) => {
         try {
             setIsLoading(true);
-            const response = await api.post("/payments/register", {
-                session_id,
-                payment_key,
-                order_id,
-            });
-            if (response.status === 200 || response.status === 201) {
+            const response = await api.post("/payments/cancel", { session_id });
+            if (response.status === 200) {
                 return response.data;
             }
         } catch (error) {
             console.log(error);
-            setError(error.response?.data.detail || "결제 정보 등록에 실패했습니다.");
+            setError(error.response?.data.detail || "결제 취소에 실패했습니다.");
             return null;
         } finally {
             setIsLoading(false);
         }
     };
 
-    // ── 2) 최종 승인 (session_id + amount 만) ──────────────
-    const confirmPayment = async ({ session_id, amount }) => {
+    /* ── 최종 승인 (토스 결제 confirm) ──────────────
+     *   backend PaymentConfirmRequest 스키마 정합 필드 4개 모두 필수.
+     *   응답: PaymentConfirmResponse { success, od_id, od_state, od_no }
+     *   (SessionResponse 아니므로 applySessionResponse 호출 X)              */
+    const confirmPayment = async ({ session_id, order_id, payment_key, amount }) => {
         try {
             setIsLoading(true);
             const response = await api.post("/payments/confirm", {
                 session_id,
+                order_id,
+                payment_key,
                 amount,
             });
             if (response.status === 200) {
@@ -97,7 +101,7 @@ const usePayment = () => {
         setError,
         isLoading,
         startPayment,
-        registerPayment,
+        cancelPayment,
         confirmPayment,
     };
 };

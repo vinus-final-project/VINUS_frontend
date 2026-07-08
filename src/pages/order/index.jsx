@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { MdOutlineShoppingBasket } from "react-icons/md";
 import { FaCaretLeft, FaCaretRight } from "react-icons/fa";
 import Navbar from "../../components/navbar";
-import { ORDER_PAGE_SIZE as PAGE_SIZE, MAIN_TIME_LIMIT_SEC } from "../../constants";
+import { ORDER_PAGE_SIZE as PAGE_SIZE } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
-import { useCountdown } from "../../hooks/useCountdown";
+import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useCart from "../../hooks/useCart";
 import useMenu from "../../hooks/useMenu";
 import useSession from "../../hooks/useSession";
@@ -23,9 +23,12 @@ export default function Order() {
   const [categories, setCategories] = useState([]); // ["전체", 카테고리명...]
   const [allMenus, setAllMenus] = useState([]);     // [{ id, name, price, category }]
 
-  // 자동 종료 타이머 (180초). 0 이 되면 시작 화면으로 복귀.
-  const onTimeout = useCallback(() => navigate("/"), [navigate]);
-  const seconds = useCountdown(MAIN_TIME_LIMIT_SEC, onTimeout);
+  // 세션 공유 카운트다운 (order/orderDetail/cart 공용, 180초)
+  // 세션 생성 시점부터 시작 → 페이지 이동해도 이어짐. 0 되면 홈 + 초기화.
+  const onTimeout = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
+  const seconds = useSessionCountdown(onTimeout);
 
   // 장바구니 합계 (footer summary 표시용)
   const { totalCount, totalPrice } = useCart();

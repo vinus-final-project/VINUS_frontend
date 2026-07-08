@@ -14,12 +14,8 @@ import resolveRoute from "../utils/fsmRoute";
  *   1) 라우팅            — resolveRoute() 결과로 navigate
  *   2) session_end 처리  — WS disconnect + 상태 초기화
  *
- * ⚠ cart 자동 동기화(syncFromServer) 는 잠정 비활성.
- *    backend SessionResponse.cart 스키마가 프론트 CartItem 과 정합화되지
- *    않았고, backend 가 cart 를 아직 별도로 관리하지 않아(빈 배열 반환)
- *    /payments/start 같은 REST 응답이 도착할 때마다 로컬 useCart.items 를
- *    덮어써 장바구니가 초기화되는 문제가 있었다.
- *    WebSocket 완성 + backend cart 스키마 정합화 후 재활성화 예정.
+ * ※ cart 는 useCart 가 useSession.cart 의 파생 selector 로 항상 최신을
+ *   반영하므로 여기서 별도 동기화 로직 필요 없음.
  *
  * 사용자가 화면을 터치로 자유롭게 이동하는 것은 간섭하지 않는다.
  * (fsm_state 값 자체가 아니라 "새 응답 도착" 시에만 반응하므로)
@@ -48,15 +44,13 @@ export default function SessionRouter() {
         if (responseSeq === 0 || responseSeq === handledSeqRef.current) return;
         handledSeqRef.current = responseSeq;
 
-        // (1) cart 자동 동기화는 상단 주석 참조 — 잠정 비활성
-
-        // (2) 라우팅
+        // (1) 라우팅
         const next = resolveRoute({ response_type, fsm_state, order_item, cart });
         if (next && next !== location.pathname) {
             navigate(next);
         }
 
-        // (3) 세션 종료
+        // (2) 세션 종료
         if (session_end) {
             disconnect();
             resetSession();

@@ -22,10 +22,20 @@ import "./main.css";
  * order_type 매핑:
  *   매장 → "STORE"  (backend OrderType enum)
  *   포장 → "TAKEOUT"
+ *
+ * ⚠ 이전 세션 이어쓰기 방지:
+ *   sessionStorage 에 이전 session_id 가 남아 있으면 useSession 이 그 값으로
+ *   시작한다(Toss 리다이렉트 대응 정책). 결제를 완주하지 않고 이탈한 경우
+ *   backend 에는 이전 세션이 살아 있고, main 재진입 시 그 세션을 계속
+ *   이어쓰면서 이전 cart/order_item 이 응답에 다시 나타나는 문제가 있다.
+ *   → 매장/포장 선택 = "새 주문 시작" 의도이므로 이 시점에 resetSession()
+ *     을 호출해 SS 백업까지 지우고 강제로 새 세션 흐름을 시작한다.
+ *   Toss 리다이렉트는 /pay 로 복귀하므로 main 을 안 거쳐 SS 복구 기능은
+ *   그대로 유지된다.
  * ────────────────────────────────────────────────────────────── */
 export default function Main() {
   const navigate = useNavigate();
-  const { setOrderType } = useSession();
+  const { setOrderType, resetSession } = useSession();
   const { connect } = useWebSocket();
 
   /* mount 즉시 WebSocket 연결 (session_id 없이) */
@@ -40,7 +50,10 @@ export default function Main() {
   };
 
   const selectOrderType = (order_type) => {
-    setOrderType(order_type); // 세션 생성은 order 페이지 mount 에서
+    // (1) 이전 세션 완전 초기화 (SS_SID_KEY 도 함께 제거됨)
+    resetSession();
+    // (2) 새 주문의 order_type 설정 — 세션 생성은 order 페이지 mount 에서 이어짐
+    setOrderType(order_type);
     navigate("/order");
   };
 

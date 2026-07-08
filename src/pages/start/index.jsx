@@ -1,14 +1,24 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { START_HOLD_MS as HOLD_MS } from "../../constants";
-import { useVad } from "../../hooks/useVad";
 import iconLight from "../../assets/VINUS_icon_light.png";
 import textLight from "../../assets/VINUS_text_light.png";
 import "./start.css";
 
 /* ──────────────────────────────────────────────────────────────
  * Start — 프로그램 실행 시 가장 먼저 나오는 스플래시 페이지
- * (설명 생략 — 기존 주석 유지)
+ *
+ * 시안: VINUS_icon_light.png (캐릭터) + VINUS_text_light.png (워드마크)
+ *
+ * 동작:
+ *  - 키보드 키 또는 마우스/터치를 3초 이상 누르고 있으면 /main 으로 이동
+ *  - 짧게 클릭 시 alert("화면")  — 이벤트 작성 위치 식별용
+ *
+ * 구현 노트:
+ *  - root 를 <button> 대신 <div role="button"> 으로 둠
+ *    (<button> 은 Enter/Space 가 keydown 단계에서 synthetic click 을 합성)
+ *  - e.repeat (OS 자동 반복) 은 무시
+ *  - 시각적 진행 표시는 시안에 없으므로 제거 (기능만 유지)
  * ────────────────────────────────────────────────────────────── */
 
 export default function Start() {
@@ -16,29 +26,6 @@ export default function Start() {
   const holdTimerRef = useRef(null);
   const heldKeyRef = useRef(null);
   const pointerHoldingRef = useRef(false);
-
-  /* ===== [VAD 테스트용] — 확인 끝나면 이 블록 지우면 됨 ===== */
-  const { start: vadStart, stop: vadStop } = useVad({
-    onUtterance: (pcm) => {
-      console.log(
-        "발화 감지! 샘플:",
-        pcm.length,
-        "≈",
-        (pcm.length / 16000).toFixed(2),
-        "초"
-      );
-    },
-  });
-
-  const handleVadStart = (e) => {
-    e.stopPropagation(); // 스플래시 hold/click 안 걸리게
-    vadStart().catch((err) => console.error("VAD start 실패:", err));
-  };
-  const handleVadStop = (e) => {
-    e.stopPropagation();
-    vadStop();
-  };
-  /* ===== [VAD 테스트용] 끝 ===== */
 
   const startHold = () => {
     if (holdTimerRef.current) return;
@@ -104,27 +91,6 @@ export default function Start() {
       onPointerCancel={onPointerEndAny}
       onPointerLeave={onPointerEndAny}
     >
-      {/* ===== [VAD 테스트용 버튼] — 확인 끝나면 지우면 됨 ===== */}
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          left: 12,
-          zIndex: 9999,
-          display: "flex",
-          gap: 8,
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <button type="button" onClick={handleVadStart}>
-          🎤 듣기 시작
-        </button>
-        <button type="button" onClick={handleVadStop}>
-          ⏹ 정지
-        </button>
-      </div>
-      {/* ===== [VAD 테스트용 버튼] 끝 ===== */}
-
       <img className="start-icon" src={iconLight} alt="" aria-hidden="true" />
       <img className="start-logo-text" src={textLight} alt="vinus" />
     </div>

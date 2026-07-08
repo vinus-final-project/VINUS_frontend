@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/navbar";
-import { LIST_SCROLL_STEP, MAIN_TIME_LIMIT_SEC } from "../../constants";
+import { LIST_SCROLL_STEP } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
-import { useCountdown } from "../../hooks/useCountdown";
+import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
@@ -14,9 +14,9 @@ export default function Cart() {
 
   const listRef = useRef(null); // 메뉴 리스트 내부 스크롤 영역
 
-  // 자동 종료 타이머 (180초)
+  // 세션 공유 카운트다운 (order/orderDetail/cart 공용)
   const onTimeout = useCallback(() => navigate("/"), [navigate]);
-  const seconds = useCountdown(MAIN_TIME_LIMIT_SEC, onTimeout);
+  const seconds = useSessionCountdown(onTimeout);
 
   // 장바구니 전역 상태
   const { items, totalCount, totalPrice, changeQuantity, removeItem, clearCart } = useCart();
@@ -81,7 +81,7 @@ export default function Cart() {
             <button
               className="cart-clear-btn"
               onClick={clearCart}
-              disabled={items.length === 0}
+              disabled={busy || items.length === 0}
               aria-label="장바구니 전체 삭제"
             >
               전체삭제
@@ -106,6 +106,7 @@ export default function Cart() {
                   <button
                     className="cart-remove-btn"
                     onClick={() => removeItem(item.id)}
+                    disabled={busy}
                     aria-label={`${item.m_name} 삭제`}
                   >
                     ×
@@ -115,6 +116,7 @@ export default function Cart() {
                     <button
                       className="cart-qty-btn"
                       onClick={() => changeQuantity(item.id, -1)}
+                      disabled={busy}
                       aria-label={`${item.m_name} 수량 감소`}
                     >
                       −
@@ -123,6 +125,7 @@ export default function Cart() {
                     <button
                       className="cart-qty-btn"
                       onClick={() => changeQuantity(item.id, +1)}
+                      disabled={busy}
                       aria-label={`${item.m_name} 수량 증가`}
                     >
                       +

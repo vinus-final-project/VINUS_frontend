@@ -1,19 +1,43 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import useSession from "./useSession";
+import useCartApi from "./useCartApi";
 
-/*  sessionStorage 백업 키.
+/* ──────────────────────────────────────────────────────────────
+ * useCart — 장바구니 selector + 마지막 주문 스냅샷
  *
- *  토스 결제창 successUrl / failUrl 리다이렉트는 브라우저 페이지 전체 리로드라
- *  React Context state 가 초기화된다. 결제 성공 후 end 페이지에서 lastOrder 를
- *  표시하려면 items 와 lastOrder 를 브라우저 세션 스토리지에 백업해두었다가
- *  App remount 시 복구해야 한다.
+ *  ▸ items / totalPrice / totalCount 는 **useSession.cart** (backend
+ *    SessionResponse.cart) 의 파생값. 로컬 저장소 없음.
+ *  ▸ 변경 함수(changeQuantity/removeItem/clearCart)는 backend REST
+ *    (/sessions/{sid}/cart/*) 를 호출하고 응답 SessionResponse 를 세션에 반영.
+ *  ▸ 결제 완료 후 end 페이지에서 표시할 lastOrder 스냅샷만 로컬에서 관리.
+ *    (backend 는 결제 성공 시 cart 를 비우므로 프론트가 스냅샷을 붙잡아야 함)
  *
- *  sessionStorage 를 쓰는 이유:
- *    - localStorage 는 브라우저를 완전히 닫아도 유지 → 다음 손님에게 노출 위험
- *    - sessionStorage 는 탭/앱 세션 종료 시 자동 삭제 → 키오스크 특성에 적합    */
-const SS_ITEMS_KEY = "vinus.cart.items";
+ * Backend CartItem 어댑터
+ *   backend      | 프론트 표준
+ *   -------------+------------
+ *   cart_item_id | id         (PATCH/DELETE URL 에 사용)
+ *   menu_id      | m_id
+ *   menu_name    | m_name
+ *   quantity     | o_m_qty
+ *   unit_price   | unitPrice  (m_price 도 동일 값 매핑)
+ *   options      | options    (배열 그대로)
+ *
+ * 노출값
+ *   items, totalCount, totalPrice
+ *   changeQuantity(id, delta)  — 수량 증감 (PATCH)
+ *   removeItem(id)             — 항목 삭제 (DELETE)
+ *   clearCart()                — 전체 삭제 (item 별 DELETE 반복 + lastOrder 초기화)
+ *   placeOrder()               — 현재 items 를 lastOrder 스냅샷
+ *   lastOrder
+ * ────────────────────────────────────────────────────────────── */
+
+/*  lastOrder sessionStorage 백업 키.
+ *  Toss 결제 리다이렉트로 인한 페이지 리로드에도 end 페이지가 스냅샷을
+ *  복구할 수 있도록. localStorage 가 아니라 sessionStorage — 다음 손님에게
+ *  이전 주문이 노출되지 않도록 탭/앱 세션 종료 시 자동 삭제.               */
 const SS_LAST_KEY = "vinus.cart.lastOrder";
 
-const readSS = (key) => {
+const readSSArray = (key) => {
     try {
         const raw = sessionStorage.getItem(key);
         if (!raw) return null;
@@ -24,157 +48,134 @@ const readSS = (key) => {
     }
 };
 
-/* ──────────────────────────────────────────────────────────────
- * useCart — 장바구니 전역 상태 (Context + Custom Hook)
- *
- * 사용 예:
- *   // 1) 루트에 Provider 감싸기
- *   import { CartProvider } from "./hooks/useCart";
- *   <CartProvider><App /></CartProvider>
- *
- *   // 2) 컴포넌트에서 default export 된 customHook 사용
- *   import useCart from "../hooks/useCart";
- *   const { items, addItem, totalPrice } = useCart();
- *
- * Cart item shape — backend 주문 스키마(orders / orderMenus / orderMenuOptions)와 정합
- *   {
- *     id:        string   (cart 내 고유 키, frontend 전용)
- *     m_id:      number   (menus.m_id)
- *     m_name:    string   (표시용, menus.m_name)
- *     m_price:   number   (단가, menus.m_price)
- *     o_m_qty:   number   (orderMenus.o_m_qty)
- *     options:   [        (선택된 옵션. backend로는 op_id 만 전송)
- *       { op_id: number, op_name: string, op_price: number,
- *         og_id?: number, og_name?: string }
- *     ]
- *     unitPrice: number   (m_price + sum(options.op_price), UI 표시용 캐시)
- *   }
- *
- *   주문 전송 시 매핑 (POST /orders 예정 — 추후 구현):
- *     orderMenus       ← { m_id, o_m_qty }
- *     orderMenuOptions ← options.map(o => ({ op_id: o.op_id }))
- *
- * 노출하는 값:
- *   items, addItem(item), removeItem(id), changeQuantity(id, delta), clearCart()
- *   totalCount  — 모든 item.o_m_qty 합
- *   totalPrice  — 모든 (unitPrice * o_m_qty) 합
- *   placeOrder() — 현재 cart 를 lastOrder 로 snapshot 한 뒤 비움
- *   lastOrder    — 직전 결제 완료된 항목들의 snapshot
- * ────────────────────────────────────────────────────────────── */
+/* backend CartItem → 프론트 표준 item 어댑터 */
+const adaptCartItem = (sc) => ({
+    id: sc.cart_item_id,
+    m_id: sc.menu_id,
+    m_name: sc.menu_name,
+    m_price: sc.unit_price ?? 0,
+    o_m_qty: sc.quantity ?? 1,
+    unitPrice: sc.unit_price ?? 0,
+    options: Array.isArray(sc.options) ? sc.options : [],
+});
 
 const CartContext = createContext(null);
 
-const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
 export const CartProvider = ({ children }) => {
-  // 초기값은 sessionStorage 에서 복구 (없으면 빈 배열)
-  const [items, setItems] = useState(() => readSS(SS_ITEMS_KEY) ?? []);
-  const [lastOrder, setLastOrder] = useState(() => readSS(SS_LAST_KEY) ?? []);
+    const {
+        cart: serverCart,
+        total_price,
+        session_id,
+        applySessionResponse,
+    } = useSession();
+    const { patchCartQuantity, deleteCartItem, clearCart: apiClearCart } = useCartApi();
 
-  // 변경 시 sessionStorage 로 백업
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(SS_ITEMS_KEY, JSON.stringify(items));
-    } catch { /* quota/private mode 등 무시 */ }
-  }, [items]);
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(SS_LAST_KEY, JSON.stringify(lastOrder));
-    } catch { /* ignore */ }
-  }, [lastOrder]);
-
-  const addItem = useCallback((item) => {
-    setItems((prev) => [...prev, { ...item, id: item.id ?? genId() }]);
-  }, []);
-
-  const removeItem = useCallback((id) => {
-    setItems((prev) => prev.filter((it) => it.id !== id));
-  }, []);
-
-  // 수량 증감 (delta = ±1 등). 최소 1 유지 (0 이면 X 로 삭제 유도).
-  const changeQuantity = useCallback((id, delta) => {
-    setItems((prev) =>
-      prev.map((it) =>
-        it.id === id
-          ? { ...it, o_m_qty: Math.max(1, (it.o_m_qty || 0) + delta) }
-          : it
-      )
+    // items 는 backend cart 파생
+    const items = useMemo(
+        () => (Array.isArray(serverCart) ? serverCart.map(adaptCartItem) : []),
+        [serverCart]
     );
-  }, []);
 
-  /*  clearCart — items 뿐 아니라 lastOrder 도 함께 초기화.
-   *  end 페이지가 홈으로 이동하기 직전에 호출하여 다음 세션이 이전 주문
-   *  내역을 보지 못하도록 한다. sessionStorage 백업도 useEffect 로 동기화됨.  */
-  const clearCart = useCallback(() => {
-    setItems([]);
-    setLastOrder([]);
-  }, []);
+    // lastOrder 만 로컬 상태 (end 페이지 스냅샷)
+    const [lastOrder, setLastOrder] = useState(() => readSSArray(SS_LAST_KEY) ?? []);
 
-  /* 서버 SessionResponse.cart → 로컬 items 동기화 (서버가 SoT).
-   * backend CartItem 스키마가 아직 미확정이라 필드명을 관대하게 매핑.
-   * 확정되면 이 어댑터만 손보면 됨. */
-  const syncFromServer = useCallback((serverCart) => {
-    if (!Array.isArray(serverCart)) return;
-    setItems(
-      serverCart.map((sc, idx) => {
-        const options = Array.isArray(sc.options) ? sc.options : [];
-        const optionPrice = options.reduce((sum, o) => sum + (o.op_price || 0), 0);
-        const mPrice = sc.m_price ?? sc.price ?? 0;
-        return {
-          id: sc.cart_item_id ?? sc.id ?? `srv-${idx}`,
-          m_id: sc.m_id,
-          m_name: sc.m_name ?? sc.name ?? "메뉴",
-          m_price: mPrice,
-          o_m_qty: sc.o_m_qty ?? sc.quantity ?? 1,
-          options,
-          unitPrice: sc.unit_price ?? sc.unitPrice ?? mPrice + optionPrice,
-        };
-      })
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(SS_LAST_KEY, JSON.stringify(lastOrder));
+        } catch {
+            /* quota/private mode 등 무시 */
+        }
+    }, [lastOrder]);
+
+    /* 수량 증감 → PATCH /sessions/{sid}/cart/{id} { delta } */
+    const changeQuantity = useCallback(
+        async (id, delta) => {
+            if (!session_id || !delta) return;
+            const res = await patchCartQuantity(session_id, id, delta);
+            if (res) applySessionResponse(res);
+        },
+        [session_id, patchCartQuantity, applySessionResponse]
     );
-  }, []);
 
-  /*  주문 확정 — 현재 items 를 lastOrder 로 snapshot 만 저장한다.
-   *  장바구니 items 는 그대로 유지 (end 페이지에서 표시하기 위해).
-   *  실제 clearCart 는 end 페이지가 홈으로 이동하기 직전에 호출한다.  */
-  const placeOrder = useCallback(() => {
-    setItems((prev) => {
-      setLastOrder(prev);
-      return prev;
-    });
-  }, []);
+    /* 항목 삭제 → DELETE /sessions/{sid}/cart/{id} */
+    const removeItem = useCallback(
+        async (id) => {
+            if (!session_id) return;
+            const res = await deleteCartItem(session_id, id);
+            if (res) applySessionResponse(res);
+        },
+        [session_id, deleteCartItem, applySessionResponse]
+    );
 
-  const totalCount = useMemo(
-    () => items.reduce((sum, it) => sum + (it.o_m_qty || 0), 0),
-    [items]
-  );
-  const totalPrice = useMemo(
-    () => items.reduce((sum, it) => sum + (it.unitPrice || 0) * (it.o_m_qty || 0), 0),
-    [items]
-  );
+    /* 전체 삭제 — DELETE /sessions/{sid}/cart (CLEAR_CART) 단일 호출.
+     *  lastOrder 도 함께 초기화 (다음 손님 노출 방지). */
+    const clearCart = useCallback(async () => {
+        setLastOrder([]);
+        if (!session_id) return;
+        const res = await apiClearCart(session_id);
+        if (res) applySessionResponse(res);
+    }, [session_id, apiClearCart, applySessionResponse]);
 
-  const value = useMemo(
-    () => ({
-      items,
-      addItem,
-      removeItem,
-      changeQuantity,
-      clearCart,
-      syncFromServer,
-      placeOrder,
-      lastOrder,
-      totalCount,
-      totalPrice,
-    }),
-    [items, addItem, removeItem, changeQuantity, clearCart, syncFromServer, placeOrder, lastOrder, totalCount, totalPrice]
-  );
+    /* 결제 확정 — 현재 items 를 lastOrder 로 스냅샷.
+     *  실제 backend cart 초기화는 결제 성공 시 backend 가 처리.               */
+    const placeOrder = useCallback(() => {
+        setLastOrder(items);
+    }, [items]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+    /* 로컬 lastOrder 만 초기화 (backend cart REST 호출 없음).
+     *  end 페이지처럼 세션 통째 종료(expireSession) 되는 경우 backend cart 는
+     *  자동 소멸하므로 여기서는 로컬 스냅샷만 지운다.                          */
+    const clearLastOrder = useCallback(() => {
+        setLastOrder([]);
+    }, []);
+
+    const totalCount = useMemo(
+        () => items.reduce((s, it) => s + (it.o_m_qty || 0), 0),
+        [items]
+    );
+
+    /* totalPrice — backend total_price 우선 (옵션 포함 정확).
+     *  0/미제공 시 items 로 fallback 계산. */
+    const totalPrice = useMemo(() => {
+        if (typeof total_price === "number" && total_price > 0) return total_price;
+        return items.reduce(
+            (s, it) => s + (it.unitPrice || 0) * (it.o_m_qty || 0),
+            0
+        );
+    }, [total_price, items]);
+
+    const value = useMemo(
+        () => ({
+            items,
+            totalCount,
+            totalPrice,
+            changeQuantity,
+            removeItem,
+            clearCart,
+            placeOrder,
+            clearLastOrder,
+            lastOrder,
+        }),
+        [
+            items,
+            totalCount,
+            totalPrice,
+            changeQuantity,
+            removeItem,
+            clearCart,
+            placeOrder,
+            clearLastOrder,
+            lastOrder,
+        ]
+    );
+
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) throw new Error("useCart를 사용하려면 CartProvider로 감싸야 합니다");
-  return context;
+    const context = useContext(CartContext);
+    if (!context) throw new Error("useCart를 사용하려면 CartProvider로 감싸야 합니다");
+    return context;
 };
 
 export default useCart;

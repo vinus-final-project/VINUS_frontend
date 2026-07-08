@@ -1,4 +1,20 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { MAIN_TIME_LIMIT_SEC } from "../constants";
+
+/*  session_id sessionStorage 백업 키.
+ *  Toss 결제창 successUrl/failUrl 리다이렉트는 브라우저 페이지 전체 리로드라
+ *  React Context 가 초기화된다. 결제 성공 후 backend cart 조회 등을 다시
+ *  하려면 session_id 가 필요하므로 SS 에 백업한다.
+ *  sessionStorage 이유: 탭/앱 세션 종료 시 자동 삭제 → 다음 손님 노출 방지. */
+const SS_SID_KEY = "vinus.session.session_id";
+const readSSString = (key) => {
+    try {
+        const raw = sessionStorage.getItem(key);
+        return typeof raw === "string" && raw.length > 0 ? raw : null;
+    } catch {
+        return null;
+    }
+};
 
 /* ──────────────────────────────────────────────────────────────
  * useSession — 음성 주문 Session 전역 상태 (Context + Custom Hook)
@@ -46,7 +62,12 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
  * ────────────────────────────────────────────────────────────── */
 
 const INITIAL_STATE = {
-    session_id: null,
+    // Toss 리로드 대응 — SS 백업이 있으면 그 값으로 시작
+    session_id: readSSString(SS_SID_KEY),
+    /*  주문 흐름(order/orderDetail/cart) 공유 카운트다운 데드라인 (ms).
+     *  session_id 가 처음 세팅되는 시점(=order 페이지에서 세션 생성 완료)
+     *  에 Date.now() + MAIN_TIME_LIMIT_SEC*1000 로 세팅. resetSession 시 null. */
+    countdown_deadline_at: null,
     response_type: null,
     success: false,
     message: null,
@@ -71,30 +92,54 @@ export const SessionProvider = ({ children }) => {
     const [session, setSession] = useState(INITIAL_STATE);
 
     /* SessionResponse(JSON) → 상태 반영
-     * 명세상 선택 필드(order_item, cart, recommendation_list, message,
-     * error_code)는 누락 시 null/빈 배열로 reset 한다. (이전 응답 값이
-     * 다음 응답에 잔존하지 않도록) */
+     *
+     * ⚠ undefined 와 null 을 구분한다.
+     *    - 응답에 **필드 자체가 없음(undefined)** → 이전 값 유지
+     *    - 응답에 **명시적으로 null** → null 로 세팅 (실제 초기화)
+     *    - 그 외 값                    → 그 값으로 갱신
+     *
+     *    예: /orders/option 응답에 order_item 필드가 빠져 있어도 로컬
+     *        order_item 을 지우지 않도록. (backend가 필드 생략과 명시적
+     *        null 을 구분해서 보내는 걸 신뢰)                              */
     const applySessionResponse = useCallback((res) => {
         if (!res || typeof res !== "object") return;
-        setSession((prev) => ({
-            ...prev,
-            response_type: res.response_type ?? prev.response_type,
-            session_id: res.session_id ?? prev.session_id,
-            success: res.success ?? prev.success,
-            message: res.message ?? null,
-            fsm_state: res.fsm_state ?? prev.fsm_state,
-            order_type: res.order_type ?? null,
-            order_item: res.order_item ?? null,
-            current_menu: res.current_menu ?? null,
-            cart: Array.isArray(res.cart) ? res.cart : [],
-            total_price: typeof res.total_price === "number" ? res.total_price : 0,
-            recommendation_list: Array.isArray(res.recommendation_list)
-                ? res.recommendation_list
-                : [],
-            error_code: res.error_code ?? null,
-            session_end: res.session_end ?? false,
-            responseSeq: prev.responseSeq + 1,
-        }));
+        const merge = (key, prevVal) =>
+            res[key] === undefined ? prevVal : res[key];
+
+        setSession((prev) => {
+            const nextSessionId = merge("session_id", prev.session_id);
+            /*  세션이 새로 시작될 때(이전엔 null, 이번엔 값이 새로 옴)에만
+             *  공유 카운트다운 데드라인을 세팅. 그 외엔 유지.                     */
+            const nextDeadline =
+                !prev.session_id && nextSessionId
+                    ? Date.now() + MAIN_TIME_LIMIT_SEC * 1000
+                    : prev.countdown_deadline_at;
+
+            return {
+                ...prev,
+                response_type: merge("response_type", prev.response_type),
+                session_id: nextSessionId,
+                success: merge("success", prev.success),
+                message: merge("message", prev.message),
+                fsm_state: merge("fsm_state", prev.fsm_state),
+                order_type: merge("order_type", prev.order_type),
+                order_item: merge("order_item", prev.order_item),
+                current_menu: merge("current_menu", prev.current_menu),
+                // 배열류는 명시적으로 배열이 있으면 반영, 없으면 이전 유지
+                cart: Array.isArray(res.cart) ? res.cart : prev.cart,
+                total_price:
+                    typeof res.total_price === "number"
+                        ? res.total_price
+                        : prev.total_price,
+                recommendation_list: Array.isArray(res.recommendation_list)
+                    ? res.recommendation_list
+                    : prev.recommendation_list,
+                error_code: merge("error_code", prev.error_code),
+                session_end: merge("session_end", prev.session_end),
+                countdown_deadline_at: nextDeadline,
+                responseSeq: prev.responseSeq + 1,
+            };
+        });
     }, []);
 
     const setSessionId = useCallback((id) => {
@@ -108,8 +153,24 @@ export const SessionProvider = ({ children }) => {
     }, []);
 
     const resetSession = useCallback(() => {
-        setSession(INITIAL_STATE);
+        try {
+            sessionStorage.removeItem(SS_SID_KEY);
+        } catch {
+            /* ignore */
+        }
+        setSession({ ...INITIAL_STATE, session_id: null });
     }, []);
+
+    /* session_id 변경 시 SS 백업 (리로드 대응) */
+    useEffect(() => {
+        try {
+            if (session.session_id) {
+                sessionStorage.setItem(SS_SID_KEY, session.session_id);
+            }
+        } catch {
+            /* ignore */
+        }
+    }, [session.session_id]);
 
     const value = useMemo(
         () => ({
