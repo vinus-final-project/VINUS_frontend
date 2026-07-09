@@ -11,6 +11,7 @@ import useMenu from "../../hooks/useMenu";
 import useSession from "../../hooks/useSession";
 import useSessionApi from "../../hooks/useSessionApi";
 import useOrder from "../../hooks/useOrder";
+import useWebSocket from "../../hooks/useWebSocket";
 import "./order.css";
 
 export default function Order() {
@@ -40,21 +41,27 @@ export default function Order() {
   const { order_type, session_id, applySessionResponse } = useSession();
   const { createSession } = useSessionApi();
   const { createOrder } = useOrder();
+  const { bindSession } = useWebSocket();
   const sessionRequestedRef = useRef(false); // StrictMode 이중 mount / 재렌더 중복 호출 방지
   const [menuBusy, setMenuBusy] = useState(false);
 
   /* ── 마운트 시 세션 생성 (터치를 통한 session_id 생성) ────
    *    main 에서 order_type 선택됨 + 아직 session_id 없음 → POST /sessions
-   *    응답(SessionResponse)은 applySessionResponse 로 반영.
-   *    WebSocket 은 main 페이지에서 이미 연결됨 (session_id 없이).
+   *    응답(SessionResponse)은 applySessionResponse 로 반영하고,
+   *    main 에서 이미 열려있는 WS 연결에 session_id 를 bind 한다
+   *    (BIND_SESSION 제어 메시지 → backend manager 가 연결↔세션 매핑).
    *    (SessionRouter 는 이미 /order 에 있으므로 추가 navigate 없음)      */
   useEffect(() => {
     if (!order_type || session_id || sessionRequestedRef.current) return;
     sessionRequestedRef.current = true;
     (async () => {
       const res = await createSession(order_type);
-      if (res) applySessionResponse(res);
-      else sessionRequestedRef.current = false; // 실패 시 재시도 허용
+      if (res) {
+        applySessionResponse(res);
+        if (res.session_id) bindSession(res.session_id);
+      } else {
+        sessionRequestedRef.current = false; // 실패 시 재시도 허용
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order_type, session_id]);

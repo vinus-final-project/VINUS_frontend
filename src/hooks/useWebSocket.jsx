@@ -143,6 +143,19 @@ export const WebSocketProvider = ({ children }) => {
         return true;
     }, []);
 
+    /* ── 세션 바인딩 ──────────────────────────────────────
+     * 터치 흐름으로 세션이 생성된 경우(POST /sessions),
+     * 이미 열려있는 이 연결에 session_id 를 매핑하도록
+     * backend 에 BIND_SESSION 제어 메시지를 보낸다.
+     * (음성 흐름에서는 backend 가 첫 발화 처리 시 스스로 bind)      */
+    const bindSession = useCallback(
+        (sessionId) => {
+            if (!sessionId) return false;
+            return sendJson({ type: "BIND_SESSION", session_id: sessionId });
+        },
+        [sendJson]
+    );
+
     /* ── 언마운트 시 정리 ─────────────────────────────────── */
     useEffect(() => {
         return () => {
@@ -164,8 +177,9 @@ export const WebSocketProvider = ({ children }) => {
             disconnect,
             sendJson,
             sendBinary,
+            bindSession,
         }),
-        [status, error, connect, disconnect, sendJson, sendBinary]
+        [status, error, connect, disconnect, sendJson, sendBinary, bindSession]
     );
 
     return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;

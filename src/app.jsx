@@ -8,6 +8,7 @@ import { CartProvider } from "./hooks/useCart";
 import { SessionProvider } from "./hooks/useSession";
 import { WebSocketProvider } from "./hooks/useWebSocket";
 import SessionRouter from "./components/SessionRouter";
+import VoiceCapture from "./components/VoiceCapture";
 import "./app.css";
 
 import Start from "./pages/start";
@@ -31,6 +32,8 @@ const RootLayout = () => {
       <div className="kiosk-frame">
         {/* SessionResponse 수신 → 라우팅/cart 동기화 (렌더 없음) */}
         <SessionRouter />
+        {/* VAD 발화 감지 → VoiceRequest WS 전송 (렌더 없음, 전역 상주) */}
+        <VoiceCapture />
         <Outlet />
         {/* 전역 팝업/모달이 필요하면 여기에 배치 (예: <InterferencePopup />) */}
       </div>
