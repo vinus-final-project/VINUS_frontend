@@ -9,6 +9,8 @@
  *   PAYMENT_SUCCESS     | /end
  *   PAYMENT_CANCEL      | /cart        (결제 취소 후 카트로 복귀)
  *   SESSION_END         | /            (처음으로)
+ *   SHOW_CART           | /cart        ("장바구니 보여줘")
+ *   SHOW_MENU           | /order       ("돌아가기" / "메뉴 더 볼게")
  *   ERROR               | null         (현재 화면 유지, 안내만)
  *
  * ▸ source === "voice" (WS 음성 응답) — NORMAL 이어도 화면이 발화
@@ -21,8 +23,9 @@
  *   ORDERING  | 존재 (menu_id)             | /menu/{menu_id}
  *             |   status 별 세부 단계는     |  (orderDetail 페이지가
  *             |   orderDetail 내부에서 처리 |   status 를 구독해 토글)
- *   ORDERING  | null                      | cart 있음 → /cart
- *             |                           | cart 없음 → /order
+ *   ORDERING  | null                      | /order (주문 계속)
+ *             |                           |  ※ 카트 이동은 SHOW_CART
+ *             |                           |    response_type 이 담당
  *   PAYMENT   | -                         | /payment
  *   COMPLETE  | -                         | /end
  *
@@ -40,6 +43,10 @@ export function resolveRoute({ response_type, fsm_state, order_item, cart, sourc
             return "/cart";
         case "SESSION_END":
             return "/";
+        case "SHOW_CART":
+            return "/cart"; // "장바구니 보여줘"
+        case "SHOW_MENU":
+            return "/order"; // "돌아가기" / "메뉴 더 볼게"
         case "ERROR":
             return null; // 현재 화면 유지 (안내는 별도 처리)
         default:
@@ -58,8 +65,10 @@ export function resolveRoute({ response_type, fsm_state, order_item, cart, sourc
             if (menuId !== undefined && menuId !== null) {
                 return `/menu/${menuId}`;
             }
-            const hasCart = Array.isArray(cart) && cart.length > 0;
-            return hasCart ? "/cart" : "/order";
+            // order_item 없음 → 주문 계속 (담기 완료 포함) — 항상 전체 메뉴로.
+            // "장바구니 보여줘"는 상태가 동일하므로 backend 가
+            // response_type=SHOW_CART 로 구분해 내려준다 (위 공통 switch 처리).
+            return "/order";
         }
         case "PAYMENT":
             return "/payment";
