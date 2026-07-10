@@ -37,7 +37,7 @@ const THRESHOLD_DB = -45;        // 게이트 여는 데시벨 (환경 소음에
                                  //   조용한 방 바닥소음 ≈ -60 ~ -70dB
                                  //   보통 발화        ≈ -35 ~ -20dB
 const PREBUFFER_CHUNKS = 3;      // 프리버퍼 크기 (~192ms) — 첫마디 잘림 방지
-const HANGOVER_CHUNKS = 8;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~512ms)
+const HANGOVER_CHUNKS = 12;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~512ms)
 
 /* ── AudioWorklet 코드 (오디오 스레드에서 실행) ──────────────
  * process() 는 128프레임씩 호출됨 — CHUNK_SIZE 만큼 모아서
