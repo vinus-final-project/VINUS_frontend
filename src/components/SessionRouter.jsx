@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import useCart from "../hooks/useCart";
 import useSession from "../hooks/useSession";
 import useWebSocket from "../hooks/useWebSocket";
 import resolveRoute from "../utils/fsmRoute";
@@ -23,6 +24,7 @@ import resolveRoute from "../utils/fsmRoute";
 export default function SessionRouter() {
     const session = useSession();
     const { disconnect } = useWebSocket();
+    const { placeOrder } = useCart();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -61,6 +63,12 @@ export default function SessionRouter() {
 
         // (2) 세션 종료
         if (session_end) {
+            // 결제 완료 응답에는 결제된 cart 가 그대로 담겨 있다 (backend 가
+            // 세션 삭제 전에 조립). 리셋 전에 lastOrder 스냅샷으로 보존해
+            // end 페이지 내역이 비는 레이스를 방지한다.
+            if (response_type === "PAYMENT_SUCCESS") {
+                placeOrder();
+            }
             disconnect();
             resetSession();
         }

@@ -33,11 +33,19 @@ const SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;         // ~64ms @16kHz (워크릿이 이 크기로 모아서 보냄)
 
 // ---- Noise Gate 튜닝 대상 ----
-const THRESHOLD_DB = -45;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
+const THRESHOLD_DB = -29;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
                                  //   조용한 방 바닥소음 ≈ -60 ~ -70dB
                                  //   보통 발화        ≈ -35 ~ -20dB
 const PREBUFFER_CHUNKS = 3;      // 프리버퍼 크기 (~192ms) — 첫마디 잘림 방지
-const HANGOVER_CHUNKS = 12;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~512ms)
+const HANGOVER_CHUNKS = 5;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~320ms, 말끝 보존용)
+                                 //   발화 커트는 EOS 무음 패딩이 담당 — 잘림 발생 시 6~7로 상향
+// 게이트 닫힘 직후 밀어넣는 무음(0) 청크 수 (~768ms)
+// backend VAD 의 발화종료 판정(END_SILENCE_FRAMES=30, 600ms)보다 길어야 함
+const EOS_PADDING_CHUNKS = 12;
+
+// 재사용하는 무음 청크 (전부 0 — webrtcvad 가 100% 무음으로 판정)
+const SILENT_CHUNK = new Int16Array(CHUNK_SIZE);
+
 
 /* ── AudioWorklet 코드 (오디오 스레드에서 실행) ──────────────
  * process() 는 128프레임씩 호출됨 — CHUNK_SIZE 만큼 모아서
@@ -143,6 +151,16 @@ export function useMicStream({ onChunk } = {}) {
             // ── HANGOVER (게이트 서서히 닫힘) ────────
             onChunkRef.current?.(int16);
             hangoverRef.current -= 1;
+
+            // hangover 소진 = 게이트가 닫히는 순간
+            // → 무음(0) 패딩을 burst 로 밀어넣어 발화를 결정론적으로 커트
+            //   (배경 소음과 무관하게 backend VAD 가 반드시 발화 종료 판정.
+            //    burst 전송이라 체감 지연에는 영향 없음)
+            if (hangoverRef.current === 0) {
+                for (let i = 0; i < EOS_PADDING_CHUNKS; i++) {
+                    onChunkRef.current?.(SILENT_CHUNK);
+                }
+            }
         } else {
             // ── 게이트 CLOSED ────────────────────────
             // 전송하지 않고 프리버퍼(링버퍼)만 갱신
