@@ -46,7 +46,7 @@ export default function OrderDetail() {
   const navigate = useNavigate();
   const { menuId } = useParams();
   const { getMenuDetail } = useMenu();
-  const { current_menu, order_item, session_id, applySessionResponse } = useSession();
+  const { current_menu, order_item, session_id, lastSource, applySessionResponse } = useSession();
   const { setQuantity: apiSetQuantity, selectOption, deselectOption, cancelOrder, completeOrder } = useOrder();
 
   // backend current_menu 우선, 없으면 GET /menus/{id} fallback
@@ -102,6 +102,72 @@ export default function OrderDetail() {
   const optionGroups = menu?.option_groups || [];
   const requiredGroups = optionGroups.filter((og) => og.og_required);
   const optionalGroups = optionGroups.filter((og) => !og.og_required);
+
+  /* ── 서버 order_item → 로컬 선택 상태 동기화 (서버가 SoT) ──
+   *
+   * 음성(WS)으로 옵션이 선택/변경/삭제되면 SessionResponse 의
+   * order_item.selected_options ({ og_id: [op_id, ...] }) 가 갱신된다.
+   * 이 값을 그대로 화면 선택 상태로 재구성해 즉시 반영한다.
+   *
+   *   - 옵션 선택: 리스트에 op_id 추가        → chip active / 스텝퍼 +
+   *   - 옵션 변경: 단일선택 그룹 교체         → 이전 chip 해제 + 새 chip active
+   *   - 옵션 삭제: 리스트에서 op_id 제거      → chip 해제 / 스텝퍼 −
+   *   - 수량 변경: order_item.quantity        → 수량 스텝퍼 반영
+   *
+   * 스텝퍼류 그룹은 리스트 내 op_id 등장 횟수 = 카운트로 해석.
+   * 터치 optimistic 업데이트도 REST 응답의 order_item 으로 이 effect 를
+   * 다시 타므로, 최종 상태는 항상 서버 값으로 정착한다.
+   * (menu(option_groups) 로드 전에 응답이 먼저 오면 매칭 불가 —
+   *  deps 에 menu 포함으로 로드 후 재동기화)                            */
+  useEffect(() => {
+    if (!order_item || optionGroups.length === 0) return;
+
+    const so = order_item.selected_options || {};
+    const nextButtons = {};
+    const nextSteppers = {};
+
+    for (const [ogIdStr, opIds] of Object.entries(so)) {
+      const ogId = Number(ogIdStr);
+      const og = optionGroups.find((g) => g.og_id === ogId);
+      if (!og || !Array.isArray(opIds)) continue;
+
+      if (isStepper(og)) {
+        // 등장 횟수 → 카운트
+        for (const opId of opIds) {
+          nextSteppers[opId] = (nextSteppers[opId] || 0) + 1;
+        }
+      } else {
+        // 버튼(chip) 그룹 — 중복 제거
+        nextButtons[ogId] = [...new Set(opIds)];
+      }
+    }
+
+    setSelectedButtons(nextButtons);
+    setStepperCounts(nextSteppers);
+    if (typeof order_item.quantity === "number" && order_item.quantity >= 1) {
+      setQuantity(order_item.quantity);
+    }
+
+    /* 음성으로 "선택 옵션"이 변경된 경우 — 해당 아코디언 자동 펼침.
+     *   선택이 있는 optional 그룹(og_required=false)을 open 에 추가한다.
+     *   (기존에 열려있던 그룹은 유지 — 추가로 열기만 하고 닫지는 않음)
+     *   터치(rest) 응답에는 적용하지 않음: 사용자가 직접 접은 아코디언을
+     *   매 응답마다 다시 펼치면 성가시기 때문.                             */
+    if (lastSource === "voice") {
+      const toOpen = {};
+      for (const ogIdStr of Object.keys(so)) {
+        const ogId = Number(ogIdStr);
+        const og = optionGroups.find((g) => g.og_id === ogId);
+        if (og && !og.og_required && (so[ogIdStr]?.length ?? 0) > 0) {
+          toOpen[ogId] = true;
+        }
+      }
+      if (Object.keys(toOpen).length > 0) {
+        setOpenOptionalGroups((prev) => ({ ...prev, ...toOpen }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order_item, menu]);
 
   const findOp = useCallback(
     (opId) => {
