@@ -37,6 +37,7 @@ export default function SessionRouter() {
             order_item,
             cart,
             session_end,
+            lastSource,
             resetSession,
         } = session;
 
@@ -44,8 +45,16 @@ export default function SessionRouter() {
         if (responseSeq === 0 || responseSeq === handledSeqRef.current) return;
         handledSeqRef.current = responseSeq;
 
-        // (1) 라우팅
-        const next = resolveRoute({ response_type, fsm_state, order_item, cart });
+        // (1) 라우팅 — source 별 강도 차등 (fsmRoute.js 주석 참조)
+        //     voice: fsm_state/order_item 기반 강제 라우팅
+        //     rest : response_type 전이만
+        const next = resolveRoute({
+            response_type,
+            fsm_state,
+            order_item,
+            cart,
+            source: lastSource,
+        });
         if (next && next !== location.pathname) {
             navigate(next);
         }

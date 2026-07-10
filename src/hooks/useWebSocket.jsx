@@ -78,7 +78,9 @@ export const WebSocketProvider = ({ children }) => {
                     if (typeof event.data === "string") {
                         try {
                             const json = JSON.parse(event.data);
-                            applySessionResponse(json);
+                            // WS 응답 = 음성 발화 결과 → "voice" 출처로 반영
+                            // (SessionRouter 가 fsm_state 기반 강제 라우팅 수행)
+                            applySessionResponse(json, "voice");
                         } catch (err) {
                             console.error("[useWebSocket] JSON 파싱 실패:", err, event.data);
                         }
