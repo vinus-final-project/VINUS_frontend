@@ -111,12 +111,7 @@ export const SessionProvider = ({ children }) => {
         if (!res || typeof res !== "object") return;
 
         // 디버그: SessionResponse 핵심 3필드 (라우팅 판정 근거)
-        console.log(
-            `[SessionResponse:${source}]`,
-            "fsm_state =", res.fsm_state,
-            "| order_item.status =", res.order_item?.status ?? null,
-            "| order_item.menu_id =", res.order_item?.menu_id ?? res.order_item?.m_id ?? null
-        );
+        console.log(res);
 
         const merge = (key, prevVal) =>
             res[key] === undefined ? prevVal : res[key];

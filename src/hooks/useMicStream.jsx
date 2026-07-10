@@ -33,7 +33,7 @@ const SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;         // ~64ms @16kHz (워크릿이 이 크기로 모아서 보냄)
 
 // ---- Noise Gate 튜닝 대상 ----
-const THRESHOLD_DB = -38;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
+const THRESHOLD_DB = -29;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
                                  //   조용한 방 바닥소음 ≈ -60 ~ -70dB
                                  //   보통 발화        ≈ -35 ~ -20dB
 const PREBUFFER_CHUNKS = 3;      // 프리버퍼 크기 (~192ms) — 첫마디 잘림 방지
