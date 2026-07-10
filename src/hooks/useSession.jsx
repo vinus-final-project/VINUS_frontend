@@ -84,6 +84,12 @@ const INITIAL_STATE = {
      * 같은 fsm_state 가 연속 수신되어도 SessionRouter 등 구독자가
      * "새 응답 도착" 을 감지할 수 있게 하는 트리거. */
     responseSeq: 0,
+    /* lastSource — 마지막 SessionResponse 의 출처.
+     *   "rest"  : 터치 REST 응답 → 사용자가 이미 해당 화면에 있으므로
+     *             response_type 전이 외 강제 라우팅 없음
+     *   "voice" : WS 음성 응답  → fsm_state/order_item 기반으로
+     *             화면을 따라가게 강제 라우팅 (SessionRouter)          */
+    lastSource: null,
 };
 
 const SessionContext = createContext(null);
@@ -101,7 +107,7 @@ export const SessionProvider = ({ children }) => {
      *    예: /orders/option 응답에 order_item 필드가 빠져 있어도 로컬
      *        order_item 을 지우지 않도록. (backend가 필드 생략과 명시적
      *        null 을 구분해서 보내는 걸 신뢰)                              */
-    const applySessionResponse = useCallback((res) => {
+    const applySessionResponse = useCallback((res, source = "rest") => {
         if (!res || typeof res !== "object") return;
         const merge = (key, prevVal) =>
             res[key] === undefined ? prevVal : res[key];
@@ -138,6 +144,7 @@ export const SessionProvider = ({ children }) => {
                 session_end: merge("session_end", prev.session_end),
                 countdown_deadline_at: nextDeadline,
                 responseSeq: prev.responseSeq + 1,
+                lastSource: source,
             };
         });
     }, []);

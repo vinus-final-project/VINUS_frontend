@@ -1,28 +1,38 @@
 /* ──────────────────────────────────────────────────────────────
  * fsmRoute — SessionResponse → 강제 라우팅 대상 결정 (순수 함수)
  *
- * ⚠ 예전엔 fsm_state 만 보고도 라우팅했지만, backend가 옵션 선택/취소
- *   같은 자잘한 이벤트마다 order_item 상태를 조금씩 바꿔서 응답하므로,
- *   그때마다 SessionRouter 가 페이지를 튕겨버리는 문제가 있었다.
+ * 응답 출처(source)에 따라 라우팅 강도가 다르다:
  *
- *   → 이제는 response_type 이 "명시적 페이지 전이"를 의미하는 경우에만
- *     라우팅 결과를 반환한다. NORMAL 응답 시엔 null 을 반환해서
- *     현재 페이지를 유지한다 (사용자가 터치로 자유롭게 이동).
- *
+ * ▸ 공통 (source 무관) — response_type 이 "명시적 페이지 전이"일 때
  *   response_type       | 경로
  *   ------------------- | -------------------------
  *   PAYMENT_SUCCESS     | /end
  *   PAYMENT_CANCEL      | /cart        (결제 취소 후 카트로 복귀)
  *   SESSION_END         | /            (처음으로)
  *   ERROR               | null         (현재 화면 유지, 안내만)
- *   NORMAL              | null         (현재 화면 유지)
  *
- *   fsm_state / order_item.status 에 따른 화면 전환은 각 페이지가
- *   자체적으로 useSession 을 구독해서 처리한다.
- *   (필수 옵션 선택 후 다음 단계 UI 를 여는 등 세부 흐름)
+ * ▸ source === "voice" (WS 음성 응답) — NORMAL 이어도 화면이 발화
+ *   결과를 따라가야 하므로 fsm_state / order_item 기반 강제 라우팅:
+ *   (명세서/FrontendResponse.md 매핑)
+ *
+ *   fsm_state | order_item                | 경로
+ *   --------- | ------------------------- | ----------------------
+ *   INIT      | -                         | /main
+ *   ORDERING  | 존재 (menu_id)             | /menu/{menu_id}
+ *             |   status 별 세부 단계는     |  (orderDetail 페이지가
+ *             |   orderDetail 내부에서 처리 |   status 를 구독해 토글)
+ *   ORDERING  | null                      | cart 있음 → /cart
+ *             |                           | cart 없음 → /order
+ *   PAYMENT   | -                         | /payment
+ *   COMPLETE  | -                         | /end
+ *
+ * ▸ source === "rest" (터치 REST 응답) — 사용자가 이미 그 화면에서
+ *   조작 중이므로 NORMAL 응답엔 라우팅하지 않는다 (페이지 튕김 방지).
+ *   화면 전환은 각 페이지의 명시적 navigate 가 담당.
  * ────────────────────────────────────────────────────────────── */
 
-export function resolveRoute({ response_type }) {
+export function resolveRoute({ response_type, fsm_state, order_item, cart, source }) {
+    // ── 1) response_type 전이 (source 무관) ──────────────────
     switch (response_type) {
         case "PAYMENT_SUCCESS":
             return "/end";
@@ -31,6 +41,30 @@ export function resolveRoute({ response_type }) {
         case "SESSION_END":
             return "/";
         case "ERROR":
+            return null; // 현재 화면 유지 (안내는 별도 처리)
+        default:
+            break; // NORMAL → source 별 분기
+    }
+
+    // ── 2) 터치(REST) NORMAL — 라우팅 없음 ───────────────────
+    if (source !== "voice") return null;
+
+    // ── 3) 음성(WS) NORMAL — fsm_state / order_item 매핑 ─────
+    switch (fsm_state) {
+        case "INIT":
+            return "/main";
+        case "ORDERING": {
+            const menuId = order_item?.menu_id ?? order_item?.m_id;
+            if (menuId !== undefined && menuId !== null) {
+                return `/menu/${menuId}`;
+            }
+            const hasCart = Array.isArray(cart) && cart.length > 0;
+            return hasCart ? "/cart" : "/order";
+        }
+        case "PAYMENT":
+            return "/payment";
+        case "COMPLETE":
+            return "/end";
         default:
             return null;
     }
