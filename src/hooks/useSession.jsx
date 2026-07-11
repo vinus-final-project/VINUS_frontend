@@ -110,6 +110,9 @@ const INITIAL_STATE = {
     recommendation_list: [],
     error_code: null,
     session_end: false,
+    /* category — 음성 카테고리 전환 힌트 ("커피 메뉴 보여줘" → "커피/라떼").
+     * backend SHOW_MENU 응답에 실려 오고, order 페이지가 구독해 탭 전환. */
+    category: null,
     /* responseSeq — SessionResponse 수신 횟수.
      * 같은 fsm_state 가 연속 수신되어도 SessionRouter 등 구독자가
      * "새 응답 도착" 을 감지할 수 있게 하는 트리거. */
@@ -176,6 +179,7 @@ export const SessionProvider = ({ children }) => {
                     : prev.recommendation_list,
                 error_code: merge("error_code", prev.error_code),
                 session_end: merge("session_end", prev.session_end),
+                category: merge("category", prev.category),
                 countdown_deadline_at: nextDeadline,
                 responseSeq: prev.responseSeq + 1,
                 lastSource: source,

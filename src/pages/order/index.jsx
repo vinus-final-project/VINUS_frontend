@@ -38,7 +38,12 @@ export default function Order() {
   const { getCategories, getMenus } = useMenu();
 
   // 세션: main 에서 저장한 order_type 으로 mount 시 세션 생성
-  const { order_type, session_id, applySessionResponse } = useSession();
+  const {
+    order_type,
+    session_id,
+    applySessionResponse,
+    category: voiceCategory, // 음성 카테고리 전환 힌트 (SHOW_MENU 응답의 c_name)
+  } = useSession();
   const { createSession } = useSessionApi();
   const { createOrder } = useOrder();
   const { bindSession } = useWebSocket();
@@ -65,6 +70,17 @@ export default function Order() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order_type, session_id]);
+
+  /* ── 음성 카테고리 전환 ("커피 메뉴 보여줘") ─────────────
+   *    backend SHOW_MENU 응답의 category(c_name) 를 구독해 탭 전환.
+   *    categories fetch 완료 후 유효한 이름일 때만 반영.               */
+  useEffect(() => {
+    if (voiceCategory && categories.includes(voiceCategory)) {
+      setCategory(voiceCategory);
+      setPage(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceCategory, categories]);
 
   /* ── 마운트 시 카테고리 + 카테고리별 메뉴 병렬 fetch ─────
    *    "전체" 가상 카테고리는 client 측에서만 사용 (filter 미적용 시 전체 노출)
