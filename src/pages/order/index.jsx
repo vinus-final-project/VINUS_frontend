@@ -7,12 +7,27 @@ import { ORDER_PAGE_SIZE as PAGE_SIZE } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useCart from "../../hooks/useCart";
-import useMenu from "../../hooks/useMenu";
+import useMenu, { getMenuBootstrapCache } from "../../hooks/useMenu";
 import useSession from "../../hooks/useSession";
 import useSessionApi from "../../hooks/useSessionApi";
 import useOrder from "../../hooks/useOrder";
 import useWebSocket from "../../hooks/useWebSocket";
 import "./order.css";
+
+/* /menus/all 응답 → 화면 상태 어댑터 (캐시 시드와 fetch 반영 공용) */
+const adaptBootstrap = (res) => {
+  const cats = res?.categories ?? [];
+  const catNameById = Object.fromEntries(cats.map((c) => [c.c_id, c.c_name]));
+  return {
+    categories: ["전체", ...cats.map((c) => c.c_name)],
+    menus: (res?.menus ?? []).map((m) => ({
+      id: m.m_id,
+      name: m.m_name,
+      price: m.m_price,
+      category: catNameById[m.c_id],
+    })),
+  };
+};
 
 export default function Order() {
   const navigate = useNavigate();
@@ -20,9 +35,16 @@ export default function Order() {
   const [category, setCategory] = useState("전체");
   const [page, setPage] = useState(0);
 
-  // backend 에서 받아온 카테고리/메뉴 (마운트 시 fetch)
-  const [categories, setCategories] = useState([]); // ["전체", 카테고리명...]
-  const [allMenus, setAllMenus] = useState([]);     // [{ id, name, price, category }]
+  // backend 에서 받아온 카테고리/메뉴
+  //   캐시가 있으면 첫 페인트부터 채워진 상태로 시작 (빈 그리드 구간 제거)
+  const [categories, setCategories] = useState(() => {
+    const cached = getMenuBootstrapCache();
+    return cached ? adaptBootstrap(cached).categories : [];
+  });
+  const [allMenus, setAllMenus] = useState(() => {
+    const cached = getMenuBootstrapCache();
+    return cached ? adaptBootstrap(cached).menus : [];
+  });
 
   // 세션 공유 카운트다운 (order/orderDetail/cart 공용, 180초)
   // 세션 생성 시점부터 시작 → 페이지 이동해도 이어짐. 0 되면 홈 + 초기화.
@@ -35,7 +57,7 @@ export default function Order() {
   const { totalCount, totalPrice } = useCart();
 
   // 메뉴 도메인 API hook
-  const { getCategories, getMenus } = useMenu();
+  const { getAllMenus } = useMenu();
 
   // 세션: main 에서 저장한 order_type 으로 mount 시 세션 생성
   const {
@@ -82,29 +104,18 @@ export default function Order() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceCategory, categories]);
 
-  /* ── 마운트 시 카테고리 + 카테고리별 메뉴 병렬 fetch ─────
+  /* ── 마운트 시 카테고리 + 전체 메뉴 일괄 fetch (GET /menus/all 1회) ──
+   *    기존 6회 호출(카테고리 1 + 카테고리별 메뉴 5)을 1회로 축소.
    *    "전체" 가상 카테고리는 client 측에서만 사용 (filter 미적용 시 전체 노출)
-   *    응답 스키마: { categories:[{c_id,c_name}] }, { menus:[{m_id,c_id,m_name,m_price}] } */
+   *    응답 스키마: { categories:[{c_id,c_name}], menus:[{m_id,c_id,m_name,m_price}] } */
   useEffect(() => {
     let alive = true;
     (async () => {
-      const catRes = await getCategories();
-      const cats = catRes?.categories ?? [];
-      if (!alive) return;
-      setCategories(["전체", ...cats.map((c) => c.c_name)]);
-
-      // 각 카테고리별 메뉴 병렬 호출
-      const lists = await Promise.all(cats.map((c) => getMenus(c.c_id)));
-      if (!alive) return;
-      const merged = lists.flatMap((res, i) =>
-        (res?.menus ?? []).map((m) => ({
-          id: m.m_id,
-          name: m.m_name,
-          price: m.m_price,
-          category: cats[i].c_name,
-        }))
-      );
-      setAllMenus(merged);
+      const res = await getAllMenus(); // 캐시 있으면 서버 호출 없이 즉시 반환
+      if (!alive || !res) return;
+      const adapted = adaptBootstrap(res);
+      setCategories(adapted.categories);
+      setAllMenus(adapted.menus);
     })();
     return () => {
       alive = false;

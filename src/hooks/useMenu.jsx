@@ -22,6 +22,15 @@ import api from "../utils/api";
  *   const detail         = await getMenuDetail(m_id);
  * ────────────────────────────────────────────────────────────── */
 
+/* ── 메뉴 부트스트랩 캐시 (모듈 레벨) ────────────────────────
+ * 키오스크 메뉴는 운영 중 불변 → 앱 기동 후 첫 호출만 서버에 가고
+ * 이후 재진입은 메모리에서 즉시 반환 (빈 그리드 깜빡임 제거).
+ * 메뉴 갱신/품절 기능이 생기면 이 캐시에 무효화 로직을 붙일 것.        */
+let menuBootstrapCache = null;
+
+/* 캐시 동기 조회 — 페이지가 초기 state 시드용으로 사용 */
+export const getMenuBootstrapCache = () => menuBootstrapCache;
+
 const useMenu = () => {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +69,27 @@ const useMenu = () => {
         }
     };
 
+    // 부트스트랩: 카테고리 + 전체 메뉴 일괄 조회 (GET /menus/all)
+    //   초기 렌더 6회 호출(카테고리 1 + 카테고리별 5)을 1회로 축소.
+    //   캐시가 있으면 서버 호출 없이 즉시 반환.
+    const getAllMenus = async () => {
+        if (menuBootstrapCache) return menuBootstrapCache;
+        try {
+            setIsLoading(true);
+            const response = await api.get("/menus/all");
+            if (response.status === 200) {
+                menuBootstrapCache = response.data; // { categories, menus }
+                return menuBootstrapCache;
+            }
+        } catch (error) {
+            console.log(error);
+            setError(error.response?.data.detail || "메뉴 일괄 조회에 실패했습니다.");
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // 메뉴 상세 조회
     const getMenuDetail = async (m_id) => {
         try {
@@ -83,6 +113,7 @@ const useMenu = () => {
         isLoading,
         getCategories,
         getMenus,
+        getAllMenus,
         getMenuDetail,
     };
 };
