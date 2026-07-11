@@ -1,8 +1,10 @@
+import { useEffect, useRef } from "react";
 import {
   createBrowserRouter,
   RouterProvider,
   Outlet,
   Navigate,
+  useNavigate,
 } from "react-router-dom";
 import { CartProvider } from "./hooks/useCart";
 import { SessionProvider } from "./hooks/useSession";
@@ -22,6 +24,37 @@ import Receipt from "./pages/receipt";
 import End from "./pages/end";
 
 /* ──────────────────────────────────────────────────────────────
+ * BootRedirect — full load(F5/주소창 직접 진입) 시 start(/) 강제 이동
+ *
+ * 모듈 로드 시점의 경로(BOOT_PATH)를 기억해 앱 최초 mount 에서 1회만 판정:
+ *   ▸ "/"      → 그대로 (이미 start)
+ *   ▸ "/pay*"  → 유지 (토스 결제창 리다이렉트 복구 — 유일한 예외)
+ *   ▸ 그 외    → navigate("/", replace)
+ *
+ * sessionStorage 초기화(0단계)는 useSession 모듈 로드 시 이미 수행됨.
+ * "/" 도착 후 start 페이지 mount 의 초기화 로직(cancelSession +
+ * resetSession + clearLastOrder)이 나머지를 완결한다.
+ * SPA 내부 이동에는 반응하지 않는다.
+ * ────────────────────────────────────────────────────────────── */
+const BOOT_PATH = window.location.pathname;
+
+const BootRedirect = () => {
+  const navigate = useNavigate();
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    if (BOOT_PATH !== "/" && !BOOT_PATH.startsWith("/pay")) {
+      navigate("/", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+};
+
+/* ──────────────────────────────────────────────────────────────
  * RootLayout — 공용 레이아웃
  * 9:16 폰 프레임을 화면 중앙에 고정하고, 그 안에서 페이지를 렌더한다.
  * 각 페이지는 nav/스크롤영역/footer 등 '프레임 내부 콘텐츠'만 반환한다.
@@ -30,6 +63,8 @@ const RootLayout = () => {
   return (
     <div className="kiosk-stage">
       <div className="kiosk-frame">
+        {/* full load(F5/직접 진입) 시 start 로 강제 이동 (렌더 없음) */}
+        <BootRedirect />
         {/* SessionResponse 수신 → 라우팅/cart 동기화 (렌더 없음) */}
         <SessionRouter />
         {/* VAD 발화 감지 → VoiceRequest WS 전송 (렌더 없음, 전역 상주) */}

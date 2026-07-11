@@ -16,6 +16,36 @@ const readSSString = (key) => {
     }
 };
 
+/* ── 페이지 full load 시 SS 백업 정리 (모듈 로드 = 리로드마다 1회) ──
+ *
+ * SS 백업의 존재 이유는 오직 "토스 결제창 리다이렉트(/pay) 복구".
+ * 그 외의 full load — F5 새로고침, 주소창에 "/" 등 직접 입력 — 는
+ * 새 손님/새 시작으로 간주하고 이전 세션 백업을 폐기한다.
+ * (키오스크 특성상 이전 손님의 session_id 가 남으면 안 됨)
+ *
+ *   경로가 /pay* → 유지 (토스 리다이렉트 복구용)
+ *   그 외 모든 경로 → sessionStorage 초기화
+ *
+ * 폐기 직전의 session_id 는 staleSessionId 로 잠깐 보관 —
+ * start 페이지가 backend CANCEL_SESSION 을 쏠 때 사용한다.          */
+let staleSessionId = null;
+try {
+    if (!window.location.pathname.startsWith("/pay")) {
+        staleSessionId = sessionStorage.getItem(SS_SID_KEY) || null;
+        sessionStorage.removeItem(SS_SID_KEY);
+    }
+} catch {
+    /* ignore (SSR/테스트 환경 등) */
+}
+
+/* full load 로 폐기된 직전 session_id 를 1회 꺼내간다 (start 에서 소비).
+ * 꺼내면 비워져서 중복 취소 호출이 발생하지 않는다.                    */
+export const takeStaleSessionId = () => {
+    const v = staleSessionId;
+    staleSessionId = null;
+    return v;
+};
+
 /* ──────────────────────────────────────────────────────────────
  * useSession — 음성 주문 Session 전역 상태 (Context + Custom Hook)
  *
