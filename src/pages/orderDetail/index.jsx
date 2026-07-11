@@ -70,7 +70,8 @@ export default function OrderDetail() {
    *   플래그(hadItemRef)로 방어. 이후 다시 null 이 되면 그때 이동.         */
   const hadItemRef = useRef(false);
   useEffect(() => {
-    if (order_item?.m_id) {
+    // backend OrderItem 필드명은 menu_id (m_id 는 과거 호환)
+    if (order_item?.menu_id ?? order_item?.m_id) {
       hadItemRef.current = true;
       return;
     }
@@ -113,6 +114,41 @@ export default function OrderDetail() {
     },
     [optionGroups]
   );
+
+  /* ── 음성 변경 동기화 — backend order_item 이 진실의 원천 ──
+   *    음성으로 옵션/수량이 바뀌면 SessionResponse.order_item 이 갱신되는데
+   *    스텝퍼/칩/수량은 로컬 상태라 화면에 안 보이던 문제 해결.
+   *    터치 조작 응답에도 같은 값이 재계산되므로 충돌 없음(서버 = 진실).   */
+  useEffect(() => {
+    if (!order_item || optionGroups.length === 0) return;
+
+    setQuantity(order_item.quantity ?? 1);
+
+    const sel = order_item.selected_options || {};
+    const nextButtons = {};
+    const nextSteppers = {};
+    const openGroups = {};
+    for (const [ogIdStr, opIds] of Object.entries(sel)) {
+      const og = optionGroups.find((g) => String(g.og_id) === String(ogIdStr));
+      if (!og || !Array.isArray(opIds)) continue;
+      if ((og.og_max ?? 1) <= 1) {
+        // 단일선택(칩) 그룹
+        nextButtons[og.og_id] = opIds.slice(0, 1);
+      } else {
+        // 누적(스텝퍼) 그룹 — 같은 op_id 반복 = 개수
+        for (const opId of opIds) {
+          nextSteppers[opId] = (nextSteppers[opId] || 0) + 1;
+        }
+        if (opIds.length > 0 && !og.og_required) {
+          openGroups[og.og_id] = true; // 선택된 그룹은 펼쳐서 보여주기
+        }
+      }
+    }
+    setSelectedButtons(nextButtons);
+    setStepperCounts(nextSteppers);
+    setOpenOptionalGroups((prev) => ({ ...prev, ...openGroups }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order_item, optionGroups]);
 
   /* ── 가격 계산 ───────────────────────────────────────── */
   const optionPrice = useMemo(() => {
