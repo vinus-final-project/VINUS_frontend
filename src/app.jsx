@@ -55,6 +55,30 @@ const BootRedirect = () => {
 };
 
 /* ──────────────────────────────────────────────────────────────
+ * BackBlock — 브라우저/안드로이드 뒤로가기 무효화
+ *
+ * 키오스크는 화면 내 버튼으로만 이동해야 한다. 뒤로가기가 허용되면
+ * order→main 등으로 되돌아가 세션 정리 없이 이전 화면을 다시 쓸 수 있다.
+ * 히스토리에 더미 엔트리를 쌓아 두고, popstate(뒤로가기) 가 발생할 때마다
+ * 즉시 다시 push 해 항상 제자리에 머물게 한다.
+ * (react-router 의 navigate 는 pushState 직접 호출이라 popstate 를
+ *  발생시키지 않으므로 SPA 내부 이동에는 영향 없음.
+ *  Toss 결제창 리다이렉트는 full load 라 이 가드와 무관.)
+ * ────────────────────────────────────────────────────────────── */
+const BackBlock = () => {
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const onPop = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  return null;
+};
+
+/* ──────────────────────────────────────────────────────────────
  * RootLayout — 공용 레이아웃
  * 9:16 폰 프레임을 화면 중앙에 고정하고, 그 안에서 페이지를 렌더한다.
  * 각 페이지는 nav/스크롤영역/footer 등 '프레임 내부 콘텐츠'만 반환한다.
@@ -65,6 +89,8 @@ const RootLayout = () => {
       <div className="kiosk-frame">
         {/* full load(F5/직접 진입) 시 start 로 강제 이동 (렌더 없음) */}
         <BootRedirect />
+        {/* 뒤로가기 무효화 — 키오스크는 버튼으로만 이동 (렌더 없음) */}
+        <BackBlock />
         {/* SessionResponse 수신 → 라우팅/cart 동기화 (렌더 없음) */}
         <SessionRouter />
         {/* VAD 발화 감지 → VoiceRequest WS 전송 (렌더 없음, 전역 상주) */}

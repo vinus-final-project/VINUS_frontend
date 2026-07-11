@@ -3,31 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { AUTO_HOME_SEC, LIST_SCROLL_STEP } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import useCart from "../../hooks/useCart";
-import useSession from "../../hooks/useSession";
-import useSessionApi from "../../hooks/useSessionApi";
+import useSessionCleanup from "../../hooks/useSessionCleanup";
 import "./end.css";
 
 /* ──────────────────────────────────────────────────────────────
  * End — 결제 완료 안내 (자동 홈 복귀)
  *
- * 홈("/") 은 우리 서비스 밖의 기존 키오스크 화면이므로, 여기서 나가기 전에
- * backend 세션을 정상 종료(EXPIRE_SESSION)하고 프론트 세션도 완전 초기화해야
- * 다음 손님이 이전 세션을 이어쓰지 않는다.
- *   1) clearLastOrder()     — 로컬 lastOrder 스냅샷 초기화 (backend REST 없음)
- *   2) expireSession(sid)   — backend DELETE /sessions/{sid} (세션+cart 통째 소멸)
- *   3) resetSession()       — useSession 상태 INITIAL_STATE + SS session_id 백업 제거
- *   4) navigate("/")        — 스플래시로 복귀
- *
- * ※ backend cart 는 세션 소멸로 자동 삭제되므로 별도 clearCart 호출 안 함.
- *   fsm_state=COMPLETE 이후에도 CLEAR_CART 이벤트가 invalid transition 일 수 있어
- *   중복 호출을 제거하는 편이 안전.
+ * 홈("/") 으로 나가기 전에 cleanup("expire") 로 정상 종료:
+ *   backend DELETE /sessions/{sid} (세션+cart 통째 소멸)
+ *   + resetSession + clearLastOrder  (useSessionCleanup 이 통합 처리)
+ * 이후 start 진입 시 sid 가 이미 null 이라 cancel 중복 호출 없음.
  * ────────────────────────────────────────────────────────────── */
 
 export default function End() {
   const navigate = useNavigate();
-  const { lastOrder, clearLastOrder } = useCart();
-  const { session_id, resetSession } = useSession();
-  const { expireSession } = useSessionApi();
+  const { lastOrder } = useCart();
+  const cleanup = useSessionCleanup();
 
   // pay 단계에서 placeOrder() 로 snapshot 된 lastOrder 를 end-item 표시 형식으로 변환.
   // lastOrder 가 비어있으면(직접 /end 진입 등) 빈 리스트로 렌더.
@@ -44,36 +35,24 @@ export default function End() {
   const listRef = useRef(null); // 메뉴 리스트 내부 스크롤 영역
   const [seconds, setSeconds] = useState(AUTO_HOME_SEC);
 
-  /*  hook 내부 함수/값을 최신 참조로 유지하되 useEffect 는 재실행되지
-   *  않도록 ref 로 래핑. hook 함수들이 매 렌더 새 참조라서 deps 에 넣으면
-   *  seconds===0 시점에 무한 호출이 되던 문제(#109) 방어.                  */
-  const clearLastOrderRef = useRef(clearLastOrder);
-  const expireSessionRef = useRef(expireSession);
-  const resetSessionRef = useRef(resetSession);
+  /*  hook 함수를 최신 참조로 유지 (deps 재실행/무한 호출 방지 — #109) */
+  const cleanupRef = useRef(cleanup);
   const navigateRef = useRef(navigate);
-  const sessionIdRef = useRef(session_id);
   useEffect(() => {
-    clearLastOrderRef.current = clearLastOrder;
-    expireSessionRef.current = expireSession;
-    resetSessionRef.current = resetSession;
+    cleanupRef.current = cleanup;
     navigateRef.current = navigate;
-    sessionIdRef.current = session_id;
-  }, [clearLastOrder, expireSession, resetSession, navigate, session_id]);
+  }, [cleanup, navigate]);
 
   /*  한 번만 실행되도록 flag — seconds===0 재렌더 사이 재호출 방지.        */
   const finishedRef = useRef(false);
 
-  /*  세션 완전 정리 + 홈 이동을 한 번만 수행.
-   *  expireSession 은 fire-and-forget — 홈 이동을 지연시키지 않는다.       */
+  /*  세션 완전 정리(정상 종료) + 홈 이동을 한 번만 수행.
+   *  cleanup("expire") 는 backend DELETE + reset + clearLastOrder 통합.
+   *  fire-and-forget — 홈 이동을 지연시키지 않는다.                        */
   const cleanupAndGoHome = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    const sid = sessionIdRef.current;
-    try { clearLastOrderRef.current?.(); } catch { /* ignore */ }
-    if (sid) {
-      try { expireSessionRef.current?.(sid); } catch { /* ignore */ }
-    }
-    resetSessionRef.current?.();
+    try { cleanupRef.current?.("expire"); } catch { /* ignore */ }
     navigateRef.current?.("/");
   };
 

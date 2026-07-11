@@ -1,9 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { START_HOLD_MS as HOLD_MS } from "../../constants";
-import useSession, { takeStaleSessionId } from "../../hooks/useSession";
-import useSessionApi from "../../hooks/useSessionApi";
-import useCart from "../../hooks/useCart";
+import useSessionCleanup from "../../hooks/useSessionCleanup";
 import iconLight from "../../assets/VINUS_icon_light.png";
 import textLight from "../../assets/VINUS_text_light.png";
 import "./start.css";
@@ -26,37 +24,19 @@ import "./start.css";
 
 export default function Start() {
   const navigate = useNavigate();
-  const { session_id, resetSession } = useSession();
-  const { cancelSession } = useSessionApi();
-  const { clearLastOrder } = useCart();
+  const cleanup = useSessionCleanup();
   const holdTimerRef = useRef(null);
   const heldKeyRef = useRef(null);
   const pointerHoldingRef = useRef(false);
 
-  /* start(/) 진입 = 새 손님/새 시작.
-   * SPA 내부 navigate("/") 로 온 경우("처음으로" 버튼, 결제 도중 이탈
-   * 포함)와 full load(F5/직접 입력) 모두 여기로 수렴한다.
-   *
-   *   ① backend CANCEL_SESSION — 살아있는 세션이 있으면 취소.
-   *       - SPA 이동:  Context 의 session_id 사용
-   *       - full load: Context 는 이미 초기화 → useSession 모듈이
-   *         SS 정리 직전에 보관해둔 staleSessionId 사용
-   *       - end 정상 종료 후: expireSession + resetSession 을 이미
-   *         거쳤으므로 둘 다 null → 호출 스킵 (중복 취소 없음)
-   *       fire-and-forget — 실패해도 backend 180초 만료가 정리.
-   *   ② resetSession()   → useSession 상태 + SS session_id 백업 제거
-   *   ③ clearLastOrder() → 이전 주문 스냅샷(SS lastOrder 백업) 제거   */
+  /* start(/) 진입 = 새 손님/새 시작 — 세션 정리의 "이탈 수렴점".
+   * "처음으로" 버튼 / 결제 도중 이탈 / F5 / 직접 입력 전부 여기로 온다.
+   *   cleanup("cancel"):
+   *     backend CANCEL_SESSION (sid 없으면 자동 스킵 — end 정상 종료
+   *     후처럼 이미 정리된 경우 중복 호출 없음)
+   *     + resetSession + clearLastOrder                             */
   useEffect(() => {
-    const sid = session_id || takeStaleSessionId();
-    if (sid) {
-      try {
-        cancelSession(sid); // fire-and-forget
-      } catch {
-        /* ignore — 만료 타이머가 정리 */
-      }
-    }
-    resetSession();
-    clearLastOrder();
+    cleanup("cancel");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

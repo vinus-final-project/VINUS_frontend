@@ -266,7 +266,7 @@ export default function Order() {
             </div>
           </div>
           <button className="order-btn" onClick={handleOrder} aria-label="주문하기">
-            주문
+            결제
           </button>
         </footer>
     </>

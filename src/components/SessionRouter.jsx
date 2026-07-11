@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useCart from "../hooks/useCart";
 import useSession from "../hooks/useSession";
-import useWebSocket from "../hooks/useWebSocket";
+import useSessionCleanup from "../hooks/useSessionCleanup";
 import resolveRoute from "../utils/fsmRoute";
 
 /* ──────────────────────────────────────────────────────────────
@@ -23,8 +23,8 @@ import resolveRoute from "../utils/fsmRoute";
  * ────────────────────────────────────────────────────────────── */
 export default function SessionRouter() {
     const session = useSession();
-    const { disconnect } = useWebSocket();
     const { placeOrder } = useCart();
+    const cleanup = useSessionCleanup();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -40,7 +40,6 @@ export default function SessionRouter() {
             cart,
             session_end,
             lastSource,
-            resetSession,
         } = session;
 
         // 새 SessionResponse 가 아닐 때(초기 렌더 포함)는 무시
@@ -61,16 +60,16 @@ export default function SessionRouter() {
             navigate(next);
         }
 
-        // (2) 세션 종료
+        // (2) 세션 종료 — backend 가 이미 세션을 정리했으므로 REST 호출 없음.
+        //     cleanup("none") = WS disconnect(마이크 정지) + resetSession
+        //     (+SS 제거) + clearLastOrder.
         if (session_end) {
             // 결제 완료 응답에는 결제된 cart 가 그대로 담겨 있다 (backend 가
             // 세션 삭제 전에 조립). 리셋 전에 lastOrder 스냅샷으로 보존해
-            // end 페이지 내역이 비는 레이스를 방지한다.
-            if (response_type === "PAYMENT_SUCCESS") {
-                placeOrder();
-            }
-            disconnect();
-            resetSession();
+            // end 페이지 내역이 비는 레이스를 방지한다 (keepLastOrder).
+            const paid = response_type === "PAYMENT_SUCCESS";
+            if (paid) placeOrder();
+            cleanup("none", { keepLastOrder: paid });
         }
         // location.pathname 은 의존성에서 제외 — 사용자의 터치 이동에는 반응하지 않는다.
         // eslint-disable-next-line react-hooks/exhaustive-deps
