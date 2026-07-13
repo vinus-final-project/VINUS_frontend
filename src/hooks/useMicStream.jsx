@@ -124,16 +124,16 @@ export function useMicStream({ onChunk } = {}) {
         const int16 = floatTo16BitPCM(float32);
 
         // 측정용 (튜닝 끝나면 제거)
-        const s = statRef.current;
-        s.max = Math.max(s.max, db);
-        s.sum += db;
-        s.n += 1;
-        if (Date.now() - s.t > 1000) {
-            console.log(
-                `[mic] max ${s.max.toFixed(1)} dB | avg ${(s.sum / s.n).toFixed(1)} dB`
-            );
-            statRef.current = { max: -Infinity, sum: 0, n: 0, t: Date.now() };
-        }
+        // const s = statRef.current;
+        // s.max = Math.max(s.max, db);
+        // s.sum += db;
+        // s.n += 1;
+        // if (Date.now() - s.t > 1000) {
+        //     console.log(
+        //         `[mic] max ${s.max.toFixed(1)} dB | avg ${(s.sum / s.n).toFixed(1)} dB`
+        //     );
+        //     statRef.current = { max: -Infinity, sum: 0, n: 0, t: Date.now() };
+        // }
 
         if (db >= THRESHOLD_DB) {
             // ── 게이트 OPEN ──────────────────────────
