@@ -27,5 +27,26 @@ export const LIST_SCROLL_STEP = 230;
 /* 매장 정보 (임시 상수 — 추후 backend 세팅 API 로 교체 예정) */
 export const STORE_NAME = "가맹점명";
 
-/* receipt 임시 주문 번호 (추후 SessionResponse 또는 결제 응답으로 교체) */
+/* receipt 임시 주문 번호 — 결제 응답(od_no) 유실 시 fallback 표시용 */
 export const ORDER_NUMBER = 271;
+
+/*  로컬 프린트 에이전트 주소 (print_agent/main.py — 키오스크 PC 상주).
+ *  포트 변경 시 에이전트 .env 의 AGENT_PORT 와 함께 맞출 것.               */
+export const PRINT_AGENT_URL = "http://127.0.0.1:8300";
+
+/*  주문번호(od_no) sessionStorage 백업 키.
+ *  pay 페이지가 backend POST /payments/confirm 응답의 od_no 를 저장하고,
+ *  receipt 모달 / end 페이지가 읽어 표시한다.
+ *  sessionStorage 이유: Toss 리다이렉트(full reload) 생존 + 탭 종료 시
+ *  자동 삭제 → 다음 손님에게 이전 주문번호 노출 방지.                     */
+export const SS_OD_NO_KEY = "vinus.order.od_no";
+
+/*  SS 에 백업된 주문번호 읽기 (없거나 파싱 실패 시 null) */
+export const readOrderNo = () => {
+    try {
+        const n = Number(sessionStorage.getItem(SS_OD_NO_KEY));
+        return Number.isInteger(n) && n > 0 ? n : null;
+    } catch {
+        return null;
+    }
+};

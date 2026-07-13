@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AUTO_HOME_SEC, LIST_SCROLL_STEP } from "../../constants";
+import { AUTO_HOME_SEC, LIST_SCROLL_STEP, readOrderNo } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import useCart from "../../hooks/useCart";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
@@ -84,9 +84,14 @@ export default function End() {
 
   return (
     <main className="kiosk-scroll end-scroll">
-      {/* 감사 문구 + 자동 복귀 안내 */}
+      {/* 감사 문구 + 주문번호 + 자동 복귀 안내 */}
       <div className="end-head">
         <h1 className="end-title">이용해 주셔서 감사합니다</h1>
+        {readOrderNo() && (
+          <p className="end-orderno">
+            주문번호 <span className="end-orderno-num">{readOrderNo()}</span>
+          </p>
+        )}
         <p className="end-sub">
           <span className="end-sec">{seconds}초</span> 후 처음으로 돌아갑니다
         </p>

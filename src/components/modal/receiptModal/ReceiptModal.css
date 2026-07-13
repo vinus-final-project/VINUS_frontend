@@ -93,3 +93,70 @@
   line-height: 1;
   color: var(--color-accent);
 }
+
+/* ── 주문내역 영수증 표 (종이 영수증 스타일) ──────────────── */
+.rm-receipt {
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 18px 16px;
+  background: var(--color-white);
+  border-radius: 8px;
+  color: #262626;
+  text-align: left;
+}
+.rm-receipt-store {
+  margin: 0;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+}
+.rm-receipt-orderno {
+  margin: 4px 0 10px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  padding-bottom: 10px;
+  border-bottom: 2px dashed #26262655;
+}
+.rm-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.rm-receipt-table th,
+.rm-receipt-table td {
+  padding: 6px 2px;
+  vertical-align: top;
+}
+.rm-receipt-table thead th {
+  font-weight: 700;
+  border-bottom: 1px dashed #26262655;
+}
+.rm-col-name {
+  text-align: left;
+  word-break: keep-all;
+}
+.rm-col-qty {
+  width: 44px;
+  text-align: center;
+}
+.rm-col-amount {
+  width: 88px;
+  text-align: right;
+  white-space: nowrap;
+}
+/* 옵션 — 메뉴명 아래 작은 글씨 */
+.rm-receipt-opts {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #26262699;
+}
+/* 합계 행 */
+.rm-receipt-table tfoot td {
+  padding-top: 10px;
+  border-top: 2px dashed #26262655;
+  font-weight: 800;
+  font-size: 17px;
+}

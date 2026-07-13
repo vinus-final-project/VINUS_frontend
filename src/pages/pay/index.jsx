@@ -4,6 +4,7 @@ import { ANONYMOUS } from "@tosspayments/tosspayments-sdk";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
+import { SS_OD_NO_KEY } from "../../constants";
 import { getTossPayments } from "../../utils/toss";
 import { lockForPaymentMic, unlockForPaymentMic } from "../../utils/micGate";
 import "./pay.css";
@@ -89,6 +90,16 @@ export default function Pay() {
         amount: amountParam,
       });
       if (res?.success) {
+        /* 주문번호(od_no) SS 백업 — receipt 모달/end 페이지 표시용.
+         * (컨텍스트가 아닌 SS 인 이유: 이 시점은 Toss 리다이렉트 직후
+         *  full reload 상태라, 이후 페이지들이 안전하게 복구하도록) */
+        if (Number.isInteger(res.od_no) && res.od_no > 0) {
+          try {
+            sessionStorage.setItem(SS_OD_NO_KEY, String(res.od_no));
+          } catch {
+            /* ignore */
+          }
+        }
         setStatus("done");
       } else {
         console.error("[pay] confirm 실패", res);

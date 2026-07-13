@@ -49,6 +49,18 @@
   font-weight: 700;
   color: var(--color-accent);
 }
+/* 주문번호 (title 과 sub 사이) */
+.end-orderno {
+  margin: 0;
+  text-align: center;
+  font-size: calc(40 * var(--u));
+  font-weight: 700;
+  color: var(--color-white);
+}
+.end-orderno-num {
+  font-weight: 800;
+  color: var(--color-accent);
+}
 
 /* ── 메뉴리스트 영역 (cart 와 동일) ────────────────────────
  *    ★ 전체 width 920 (margin 80 양옆에 flush)
