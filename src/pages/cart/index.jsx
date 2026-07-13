@@ -103,6 +103,17 @@ export default function Cart() {
                 <div className="cart-item" key={item.id}>
                   <span className="cart-name">{item.m_name}</span>
 
+                  {/* 선택된 옵션 — 메뉴명과 스텝퍼 사이 (누적 옵션은 개수 표시) */}
+                  {item.options?.length > 0 && (
+                    <span className="cart-opts">
+                      {item.options
+                        .map((op) =>
+                          op.qty > 1 ? `${op.op_name} ${op.qty}개` : op.op_name
+                        )
+                        .join(", ")}
+                    </span>
+                  )}
+
                   <button
                     className="cart-remove-btn"
                     onClick={() => removeItem(item.id)}

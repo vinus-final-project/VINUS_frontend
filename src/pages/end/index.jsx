@@ -29,6 +29,10 @@ export default function End() {
       name: it.m_name,
       count: it.o_m_qty,
       price: it.unitPrice * it.o_m_qty,
+      // 선택된 옵션 텍스트 (cart 페이지와 동일 포맷 — 누적 옵션은 개수 표시)
+      opts: (it.options ?? [])
+        .map((op) => (op.qty > 1 ? `${op.op_name} ${op.qty}개` : op.op_name))
+        .join(", "),
     }));
   }, [lastOrder]);
 
@@ -92,8 +96,13 @@ export default function End() {
       <div className="list-area">
         <div className="end-list" ref={listRef}>
           {displayItems.map((item) => (
-            <div className="end-item" key={item.id}>
+            <div
+              className={`end-item${item.opts ? " has-opts" : ""}`}
+              key={item.id}
+            >
               <span className="end-name">{item.name}</span>
+              {/* 선택된 옵션 — 메뉴명 아래 (cart 카드와 동일 방식) */}
+              {item.opts && <span className="end-opts">{item.opts}</span>}
               <span className="end-count">{formatCount(item.count)}</span>
               <span className="end-price">{formatKRW(item.price)}</span>
             </div>
