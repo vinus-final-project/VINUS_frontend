@@ -110,6 +110,13 @@ export default function Pay() {
       const orderName =
         items.length > 1 ? `${firstName} 외 ${items.length - 1}건` : firstName;
 
+      /* ⚠ lastOrder 스냅샷은 반드시 "결제창을 열기 전" 여기서 찍는다.
+       *   토스 successUrl 리다이렉트는 full reload 라서 돌아온 시점엔
+       *   cart(items)가 빈 상태 — done 시점에 placeOrder() 하면 빈
+       *   스냅샷이 SS 를 덮어써 end 주문내역이 비는 버그가 재발한다.
+       *   (placeOrder 는 SS vinus.cart.lastOrder 에 백업되므로 리로드 생존) */
+      placeOrder();
+
       const successUrl = `${window.location.origin}/pay?result=success`;
       const failUrl = `${window.location.origin}/pay?result=fail`;
 
@@ -154,13 +161,14 @@ export default function Pay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── done: placeOrder + 1.5초 후 receipt ──────────── */
+  /* ── done: 1.5초 후 receipt ─────────────────────────
+   *   placeOrder 는 결제창 열기 직전에 이미 수행 — 리다이렉트 리로드 후
+   *   items 가 빈 상태라 여기서 스냅샷하면 안 됨 (첫 진입 effect 주석 참조) */
   useEffect(() => {
     if (status !== "done") return;
-    placeOrder();
     const id = setTimeout(() => navigate("/receipt"), 1500);
     return () => clearTimeout(id);
-  }, [status, navigate, placeOrder]);
+  }, [status, navigate]);
 
   /* ── fail: 1.5초 후 payment 복귀 ──────────────────── */
   useEffect(() => {
