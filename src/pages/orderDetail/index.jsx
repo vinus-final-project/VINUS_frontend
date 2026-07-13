@@ -42,6 +42,10 @@ const isStepper = (og) => groupWidget(og) !== "BUTTON";
 const groupStepperTotal = (og, stepperCounts) =>
   (og?.options || []).reduce((s, op) => s + (stepperCounts[op.op_id] || 0), 0);
 
+/* 아코디언 하단 '합계' 표시 여부 — 당도/얼음량은 전부 무료 옵션이라
+ * 금액 합계 UI 가 무의미하므로 숨긴다. */
+const showsSubtotal = (og) => !/당도|얼음량/.test(og?.og_name || "");
+
 export default function OrderDetail() {
   const navigate = useNavigate();
   const { menuId } = useParams();
@@ -528,10 +532,13 @@ export default function OrderDetail() {
               {isOpen && (
                 <div className="acc-body">
                   <div className="acc-scroll-area">{renderGroupBody(og)}</div>
-                  <div className="paid-total">
-                    <span className="paid-total-label">합계</span>
-                    <span className="paid-total-value">{formatKRW(subtotal)}</span>
-                  </div>
+                  {/* 당도/얼음량(무료 옵션 그룹)은 합계 UI 제거 */}
+                  {showsSubtotal(og) && (
+                    <div className="paid-total">
+                      <span className="paid-total-label">합계</span>
+                      <span className="paid-total-value">{formatKRW(subtotal)}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
