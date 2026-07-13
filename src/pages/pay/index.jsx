@@ -5,6 +5,7 @@ import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
 import { getTossPayments } from "../../utils/toss";
+import { lockForPaymentMic, unlockForPaymentMic } from "../../utils/micGate";
 import "./pay.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -48,6 +49,16 @@ export default function Pay() {
   const openedRef = useRef(false);
   // confirm 이중 호출 방지 (StrictMode 이중 mount 대응)
   const confirmedRef = useRef(false);
+
+  /* ── 결제 잠금 — pay 체류 중 마이크 전송·TTS 재생 차단 ──
+   *   PC 팝업형 결제창은 우리 앱이 뒤에 살아있어, 발화가 backend 로
+   *   흘러가면 ERROR 안내 TTS 재생·의도치 않은 화면 이동이 생긴다.
+   *   mount 시 잠그고(재생 중 TTS 도 즉시 중단) unmount 시 해제.
+   *   토스 리다이렉트(full reload) 복귀 시에도 mount 가 다시 잠근다. */
+  useEffect(() => {
+    lockForPaymentMic();
+    return () => unlockForPaymentMic();
+  }, []);
 
   /* ── URL 정리 — result 판독 후 즉시 /pay 로 replaceState ─
    * 뒤로가기/재진입 시 이전 결과가 다시 판독되는 것을 방지.  */

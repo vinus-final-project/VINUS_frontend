@@ -65,8 +65,6 @@ export default function Order() {
     session_id,
     applySessionResponse,
     category: voiceCategory, // 음성 카테고리 전환 힌트 (SHOW_MENU 응답의 c_name)
-    page_move: voicePageMove, // 음성 페이지 넘김 힌트 ("NEXT"|"PREV")
-    responseSeq,
   } = useSession();
   const { createSession } = useSessionApi();
   const { createOrder } = useOrder();
@@ -130,18 +128,6 @@ export default function Order() {
     category === "전체" ? allMenus : allMenus.filter((m) => m.category === category);
   const totalPages = Math.max(1, Math.ceil(menus.length / PAGE_SIZE));
   const pageItems = menus.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-
-  /* ── 음성 페이지 넘김 ("다음 페이지" / "이전 페이지") ─────
-   *    responseSeq 기반 — 같은 방향을 연속으로 말해도 매번 동작.
-   *    범위 클램프(0 ~ totalPages-1)는 페이지 수를 아는 프론트 담당.   */
-  useEffect(() => {
-    if (!voicePageMove) return;
-    setPage((p) => {
-      const next = voicePageMove === "NEXT" ? p + 1 : p - 1;
-      return Math.min(Math.max(next, 0), totalPages - 1);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [responseSeq]);
 
   // 3x3 격자를 항상 유지: 모자란 칸은 빈 placeholder로 채움
   const cells = [

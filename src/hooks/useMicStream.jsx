@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
-import { isTtsActiveMic, bargeInMic } from "../utils/micGate";
+import {
+    isTtsActiveMic,
+    bargeInMic,
+    isPaymentLockedMic,
+} from "../utils/micGate";
 
 /* ──────────────────────────────────────────────────────────────
  * useMicStream — 마이크 → Noise Gate → 16kHz mono Int16 PCM 스트림
@@ -127,6 +131,21 @@ export function useMicStream({ onChunk } = {}) {
 
     /* 워크릿에서 넘어온 Float32 청크 → dB 판정 → Noise Gate */
     const handleWorkletChunk = useCallback((float32) => {
+        /* ── 결제 잠금: pay 페이지 체류 중 마이크 전면 차단 ────────
+         *    (barge-in 도 없음 — 결제창 앞에서 발화가 backend 로
+         *     흘러가면 ERROR 안내/의도치 않은 화면 이동이 생긴다)      */
+        if (isPaymentLockedMic()) {
+            // 발화 도중 잠금이 걸린 경우 — EOS 무음 패딩으로 발화 종료
+            if (hangoverRef.current > 0) {
+                hangoverRef.current = 0;
+                for (let i = 0; i < EOS_PADDING_CHUNKS; i++) {
+                    onChunkRef.current?.(SILENT_CHUNK);
+                }
+            }
+            preBufferRef.current = [];
+            return;
+        }
+
         const db = chunkDb(float32);
 
         /* ── barge-in: TTS 재생 중 처리 (utils/micGate.js) ─────────

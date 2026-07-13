@@ -65,3 +65,34 @@ export const bargeInMic = () => {
     }
     active = false;
 };
+
+/* ── 결제 잠금 (pay 페이지 체류 중) ─────────────────────────
+ * 토스 결제창이 떠 있는 동안(PC 팝업형은 우리 앱이 뒤에 살아있음)
+ * 음성 발화가 backend 로 흘러가 ERROR 안내 TTS 가 재생되거나,
+ * "취소" 발화로 뒤의 앱이 이동해버리는 것을 막는다.
+ *   ▸ useMicStream : 잠금 중 마이크 전송 전면 차단 (barge-in 없음)
+ *   ▸ TtsPlayer    : 잠금 중 신규 재생 스킵
+ *   ▸ 잠그는 순간 재생 중이던 TTS 도 즉시 중단
+ * full reload(토스 리다이렉트) 시 모듈 재평가로 해제 상태에서 시작
+ * → pay 페이지 mount 가 다시 잠근다.                                */
+let paymentLocked = false;
+
+export const isPaymentLockedMic = () => paymentLocked;
+
+export const lockForPaymentMic = () => {
+    paymentLocked = true;
+    try {
+        stopper?.(); // 재생 중이던 안내 즉시 중단
+    } catch {
+        /* ignore */
+    }
+    if (tailTimer) {
+        clearTimeout(tailTimer);
+        tailTimer = null;
+    }
+    active = false;
+};
+
+export const unlockForPaymentMic = () => {
+    paymentLocked = false;
+};
