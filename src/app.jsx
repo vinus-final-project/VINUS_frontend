@@ -10,6 +10,7 @@ import { CartProvider } from "./hooks/useCart";
 import { SessionProvider } from "./hooks/useSession";
 import { WebSocketProvider } from "./hooks/useWebSocket";
 import SessionRouter from "./components/SessionRouter";
+import TtsPlayer from "./components/TtsPlayer";
 import VoiceCapture from "./components/VoiceCapture";
 import "./app.css";
 
@@ -95,6 +96,8 @@ const RootLayout = () => {
         <SessionRouter />
         {/* VAD 발화 감지 → VoiceRequest WS 전송 (렌더 없음, 전역 상주) */}
         <VoiceCapture />
+        {/* SessionResponse.message → Polly TTS 재생 (렌더 없음, 전역 상주) */}
+        <TtsPlayer />
         <Outlet />
         {/* 전역 팝업/모달이 필요하면 여기에 배치 (예: <InterferencePopup />) */}
       </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { isTtsActiveMic, bargeInMic } from "../utils/micGate";
 
 /* ──────────────────────────────────────────────────────────────
  * useMicStream — 마이크 → Noise Gate → 16kHz mono Int16 PCM 스트림
@@ -36,6 +37,12 @@ const CHUNK_SIZE = 1024;         // ~64ms @16kHz (워크릿이 이 크기로 모
 const THRESHOLD_DB = -29;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
                                  //   조용한 방 바닥소음 ≈ -60 ~ -70dB
                                  //   보통 발화        ≈ -35 ~ -20dB
+// barge-in 임계값 — TTS 재생 중에는 이 값 이상만 발화로 인정.
+//   스피커에서 새어 들어오는 TTS 소리(bleed)보다 높고, 마이크 가까이서
+//   말하는 사용자 발화 피크(-20dB 부근)보다 낮아야 한다.
+//   실기기에서 TTS 재생 중 [mic] max dB 로그를 보고 조정:
+//   bleed max 가 -30 이면 -25 정도가 적당.
+const BARGE_IN_DB = -25;
 const PREBUFFER_CHUNKS = 3;      // 프리버퍼 크기 (~192ms) — 첫마디 잘림 방지
 const HANGOVER_CHUNKS = 5;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~320ms, 말끝 보존용)
                                  //   발화 커트는 EOS 무음 패딩이 담당 — 잘림 발생 시 6~7로 상향
@@ -121,6 +128,32 @@ export function useMicStream({ onChunk } = {}) {
     /* 워크릿에서 넘어온 Float32 청크 → dB 판정 → Noise Gate */
     const handleWorkletChunk = useCallback((float32) => {
         const db = chunkDb(float32);
+
+        /* ── barge-in: TTS 재생 중 처리 (utils/micGate.js) ─────────
+         *    마이크를 끄지 않는다 — 대신 더 높은 임계값(BARGE_IN_DB)만
+         *    적용해 스피커 bleed 는 거르고 사용자 발화만 통과시킨다.
+         *      ▸ db ≥ BARGE_IN_DB : 사용자가 안내를 끊고 말함
+         *        → TTS 즉시 중단(bargeInMic) + TTS 잔향 섞인 프리버퍼
+         *          폐기 후, 아래 일반 게이트 로직으로 발화 시작 처리
+         *      ▸ 그 외 : TTS 재생음/잔향 — 전송·프리버퍼 모두 차단      */
+        if (isTtsActiveMic()) {
+            if (db >= BARGE_IN_DB) {
+                bargeInMic();              // TTS 중단 → 일반 모드 즉시 복귀
+                preBufferRef.current = []; // bleed 섞인 프리버퍼 폐기
+                // fall through — 이 청크부터 일반 게이트가 발화로 처리
+            } else {
+                // 발화 도중 TTS 가 시작된 경우 — EOS 무음 패딩으로 진행 중
+                // 발화를 종료 (backend VadSegmenter 에 반쪽 발화 안 남게)
+                if (hangoverRef.current > 0) {
+                    hangoverRef.current = 0;
+                    for (let i = 0; i < EOS_PADDING_CHUNKS; i++) {
+                        onChunkRef.current?.(SILENT_CHUNK);
+                    }
+                }
+                preBufferRef.current = [];
+                return;
+            }
+        }
         const int16 = floatTo16BitPCM(float32);
 
         // 측정용 (튜닝 끝나면 제거)
@@ -174,8 +207,17 @@ export function useMicStream({ onChunk } = {}) {
     const start = useCallback(async () => {
         if (ctxRef.current) return; // 이미 실행 중
 
-        // 1) 마이크
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 1) 마이크 — 에코 캔슬레이션 명시 (barge-in 의 1차 방어선)
+        //    브라우저 AEC 가 스피커 출력(TTS)을 마이크 입력에서 상쇄해
+        //    bleed 자체를 줄인다. BARGE_IN_DB 임계값은 2차 방어선.
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                channelCount: 1,
+            },
+        });
         streamRef.current = stream;
 
         // 2) AudioContext 16kHz (source 가 16kHz 로 자동 리샘플됨)
