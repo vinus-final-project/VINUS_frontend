@@ -120,9 +120,14 @@ export default function OrderDetail() {
    *    스텝퍼/칩/수량은 로컬 상태라 화면에 안 보이던 문제 해결.
    *    터치 조작 응답에도 같은 값이 재계산되므로 충돌 없음(서버 = 진실).   */
   useEffect(() => {
-    if (!order_item || optionGroups.length === 0) return;
+    if (!order_item) return;
 
+    // 수량은 옵션 그룹 유무와 무관하게 항상 동기화
+    //   (디저트류처럼 option_groups 가 빈 메뉴에서 수량 변경이
+    //    화면에 반영되지 않던 문제 — 아래 옵션 동기화 가드보다 먼저)
     setQuantity(order_item.quantity ?? 1);
+
+    if (optionGroups.length === 0) return;
 
     const sel = order_item.selected_options || {};
     const nextButtons = {};
