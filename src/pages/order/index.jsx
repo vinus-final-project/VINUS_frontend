@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { MdOutlineShoppingBasket } from "react-icons/md";
 import { FaCaretLeft, FaCaretRight } from "react-icons/fa";
 import Navbar from "../../components/navbar";
-import { ORDER_PAGE_SIZE as PAGE_SIZE } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useCart from "../../hooks/useCart";
@@ -13,6 +12,10 @@ import useSessionApi from "../../hooks/useSessionApi";
 import useOrder from "../../hooks/useOrder";
 import useWebSocket from "../../hooks/useWebSocket";
 import "./order.css";
+
+/* 한 화면 메뉴 개수 — 2열 × 3행 (좌측 1열은 카테고리).
+ * 이 페이지의 grid CSS(order.css .menu-grid)와 강결합이라 여기 상주. */
+const PAGE_SIZE = 6;
 
 /* /menus/all 응답 → 화면 상태 어댑터 (캐시 시드와 fetch 반영 공용) */
 const adaptBootstrap = (res) => {
@@ -37,9 +40,10 @@ export default function Order() {
 
   // backend 에서 받아온 카테고리/메뉴
   //   캐시가 있으면 첫 페인트부터 채워진 상태로 시작 (빈 그리드 구간 제거)
+  //   데이터 없어도(backend 미기동 등) "전체" 는 기본 표시 — 레이아웃 확인용
   const [categories, setCategories] = useState(() => {
     const cached = getMenuBootstrapCache();
-    return cached ? adaptBootstrap(cached).categories : [];
+    return cached ? adaptBootstrap(cached).categories : ["전체"];
   });
   const [allMenus, setAllMenus] = useState(() => {
     const cached = getMenuBootstrapCache();
@@ -65,8 +69,6 @@ export default function Order() {
     session_id,
     applySessionResponse,
     category: voiceCategory, // 음성 카테고리 전환 힌트 (SHOW_MENU 응답의 c_name)
-    page_move: voicePageMove, // 음성 페이지 넘김 힌트 ("NEXT"|"PREV")
-    responseSeq,
   } = useSession();
   const { createSession } = useSessionApi();
   const { createOrder } = useOrder();
@@ -130,18 +132,6 @@ export default function Order() {
     category === "전체" ? allMenus : allMenus.filter((m) => m.category === category);
   const totalPages = Math.max(1, Math.ceil(menus.length / PAGE_SIZE));
   const pageItems = menus.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-
-  /* ── 음성 페이지 넘김 ("다음 페이지" / "이전 페이지") ─────
-   *    responseSeq 기반 — 같은 방향을 연속으로 말해도 매번 동작.
-   *    범위 클램프(0 ~ totalPages-1)는 페이지 수를 아는 프론트 담당.   */
-  useEffect(() => {
-    if (!voicePageMove) return;
-    setPage((p) => {
-      const next = voicePageMove === "NEXT" ? p + 1 : p - 1;
-      return Math.min(Math.max(next, 0), totalPages - 1);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [responseSeq]);
 
   // 3x3 격자를 항상 유지: 모자란 칸은 빈 placeholder로 채움
   const cells = [
@@ -219,62 +209,72 @@ export default function Order() {
             </button>
           </div>
 
-          {/* 카테고리: 가로 스크롤 (디저트까지 넘겨서 볼 수 있음) */}
-          <div className="category-bar" role="tablist" aria-label="메뉴 카테고리">
-            {categories.map((c) => (
-              <button
-                key={c}
-                role="tab"
-                aria-selected={category === c}
-                className={`category-btn ${category === c ? "is-active" : ""}`}
-                onClick={() => handleCategory(c)}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-
-          {/* 메뉴 격자: 3 x 3 */}
-          <div className="menu-grid">
-            {cells.map((menu, i) =>
-              menu ? (
+          {/* ── 본문: [카테고리 1열] + [메뉴 2×3 + 페이지네이션] ── */}
+          <div className="order-body">
+            {/* 카테고리: 세로 목록 (좌측 1열) */}
+            <div
+              className="category-col"
+              role="tablist"
+              aria-label="메뉴 카테고리"
+              aria-orientation="vertical"
+            >
+              {categories.map((c) => (
                 <button
-                  key={menu.id}
-                  className="menu-card"
-                  onClick={() => handleMenu(menu)}
-                  aria-label={`${menu.name} ${formatKRW(menu.price)}`}
+                  key={c}
+                  role="tab"
+                  aria-selected={category === c}
+                  className={`category-btn ${category === c ? "is-active" : ""}`}
+                  onClick={() => handleCategory(c)}
                 >
-                  <span className="menu-name">{menu.name}</span>
-                  <span className="menu-price">{formatKRW(menu.price)}</span>
+                  {c}
                 </button>
-              ) : (
-                <div
-                  key={`empty-${i}`}
-                  className="menu-card menu-card--empty"
-                  aria-hidden="true"
-                />
-              )
-            )}
-          </div>
+              ))}
+            </div>
 
-          {/* 페이지네이션: 한 번에 9개씩 */}
-          <div className="pager">
-            <button
-              className="pager-btn"
-              onClick={handlePrev}
-              disabled={page === 0}
-              aria-label="이전 페이지"
-            >
-              <FaCaretLeft className="pager-icon" aria-hidden="true" />
-            </button>
-            <button
-              className="pager-btn"
-              onClick={handleNext}
-              disabled={page >= totalPages - 1}
-              aria-label="다음 페이지"
-            >
-              <FaCaretRight className="pager-icon" aria-hidden="true" />
-            </button>
+            <div className="menu-area">
+              {/* 메뉴 격자: 2 x 3 */}
+              <div className="menu-grid">
+                {cells.map((menu, i) =>
+                  menu ? (
+                    <button
+                      key={menu.id}
+                      className="menu-card"
+                      onClick={() => handleMenu(menu)}
+                      aria-label={`${menu.name} ${formatKRW(menu.price)}`}
+                    >
+                      <span className="menu-name">{menu.name}</span>
+                      <span className="menu-price">{formatKRW(menu.price)}</span>
+                    </button>
+                  ) : (
+                    <div
+                      key={`empty-${i}`}
+                      className="menu-card menu-card--empty"
+                      aria-hidden="true"
+                    />
+                  )
+                )}
+              </div>
+
+              {/* 페이지네이션: 한 번에 6개씩 (메뉴 두 열 아래 정렬) */}
+              <div className="pager">
+                <button
+                  className="pager-btn"
+                  onClick={handlePrev}
+                  disabled={page === 0}
+                  aria-label="이전 페이지"
+                >
+                  <FaCaretLeft className="pager-icon" aria-hidden="true" />
+                </button>
+                <button
+                  className="pager-btn"
+                  onClick={handleNext}
+                  disabled={page >= totalPages - 1}
+                  aria-label="다음 페이지"
+                >
+                  <FaCaretRight className="pager-icon" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           </div>
         </main>
 
