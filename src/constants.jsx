@@ -30,23 +30,26 @@ export const STORE_NAME = "가맹점명";
 /* receipt 임시 주문 번호 — 결제 응답(od_no) 유실 시 fallback 표시용 */
 export const ORDER_NUMBER = 271;
 
-/*  로컬 프린트 에이전트 주소 (print_agent/main.py — 키오스크 PC 상주).
- *  포트 변경 시 에이전트 .env 의 AGENT_PORT 와 함께 맞출 것.               */
-export const PRINT_AGENT_URL = "http://127.0.0.1:8300";
+/* ── 페이지 입장 음성 안내 (PageGuide) ─────────────────────────
+ * 터치 이동 등 "백엔드 message 없는" 화면 전이에서만 재생된다.
+ * 음성 명령으로 이동한 경우 백엔드 message(에코백/안내)가 우선 —
+ * 우선순위 규칙은 components/PageGuide.jsx 참고.
+ * 키는 라우트 경로. 메뉴 상세는 "/menu" prefix 매칭.
+ * 없는 페이지(start, pay, end)는 안내 없음:
+ *   start — 대기 화면, pay — 결제 잠금(micGate), end — PAYMENT_SUCCESS
+ *   message 가 이미 안내.                                             */
+export const PAGE_GUIDE_TEXT = {
+    "/main": "매장에서 드시면 매장, 가져가시면 포장을 선택해주세요.",
+    "/order": "주문하실 메뉴를 말씀하시거나 화면에서 선택해주세요.",
+    "/menu": "옵션을 선택해주세요. 다 고르셨으면 주문 완료라고 말씀해주세요.",
+    "/cart": "주문 내역을 확인해주세요. 결제하시려면 결제할게요라고 말씀해주세요.",
+    "/payment": "결제 수단을 선택해주세요.",
+    "/receipt": "영수증이 필요하시면 영수증 받기 버튼을 눌러주세요.",
+};
 
-/*  주문번호(od_no) sessionStorage 백업 키.
- *  pay 페이지가 backend POST /payments/confirm 응답의 od_no 를 저장하고,
- *  receipt 모달 / end 페이지가 읽어 표시한다.
- *  sessionStorage 이유: Toss 리다이렉트(full reload) 생존 + 탭 종료 시
- *  자동 삭제 → 다음 손님에게 이전 주문번호 노출 방지.                     */
-export const SS_OD_NO_KEY = "vinus.order.od_no";
-
-/*  SS 에 백업된 주문번호 읽기 (없거나 파싱 실패 시 null) */
-export const readOrderNo = () => {
-    try {
-        const n = Number(sessionStorage.getItem(SS_OD_NO_KEY));
-        return Number.isInteger(n) && n > 0 ? n : null;
-    } catch {
-        return null;
-    }
+/* 경로 → 안내 문구 (없으면 null). 메뉴 상세(/menu/3 등)는 prefix 매칭 */
+export const resolvePageGuideText = (pathname) => {
+    if (PAGE_GUIDE_TEXT[pathname]) return PAGE_GUIDE_TEXT[pathname];
+    if (pathname.startsWith("/menu/")) return PAGE_GUIDE_TEXT["/menu"];
+    return null;
 };
