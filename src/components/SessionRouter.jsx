@@ -4,6 +4,7 @@ import useCart from "../hooks/useCart";
 import useSession from "../hooks/useSession";
 import useSessionCleanup from "../hooks/useSessionCleanup";
 import resolveRoute from "../utils/fsmRoute";
+import { issueOrderNumber } from "../utils/orderNumber";
 
 /* ──────────────────────────────────────────────────────────────
  * SessionRouter — SessionResponse 기반 전역 라우팅 감시자
@@ -68,7 +69,13 @@ export default function SessionRouter() {
             // 세션 삭제 전에 조립). 리셋 전에 lastOrder 스냅샷으로 보존해
             // end 페이지 내역이 비는 레이스를 방지한다 (keepLastOrder).
             const paid = response_type === "PAYMENT_SUCCESS";
-            if (paid) placeOrder();
+            if (paid) {
+                placeOrder();
+                // 주문번호 발급 — WS push 경로 (토스 리다이렉트 경로는
+                // pay 페이지 done 에서 발급. 리로드 후 WS 는 끊겨 있어
+                // 두 경로가 동시에 실행되는 경우는 없다)
+                issueOrderNumber();
+            }
             cleanup("none", { keepLastOrder: paid });
         }
         // location.pathname 은 의존성에서 제외 — 사용자의 터치 이동에는 반응하지 않는다.
