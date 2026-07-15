@@ -19,7 +19,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--space-section);          /* ★ 섹션 사이 30 — padding 아닌 gap 으로 */
+  padding-top: var(--space-section-l); /* header ↔ 장바구니 gap 60 */
+  gap: var(--space-section-l);         /* 장바구니 ↔ 메뉴 영역 gap 60 */
 }
 
 /* ── 장바구니 (figma w367 h120 radius30 border-5 orange) ── */
@@ -48,43 +49,62 @@
   height: calc(85 * var(--u));
 }
 
-/* ── 카테고리 5개 가로 (figma w180×5, gap ~30, h90, font 45) ── */
-/*    좌우 80 위치는 padding 대신 자체 margin 으로                  */
-.category-bar {
+/* ── 본문: [카테고리 1열 w280] + gap40 + [메뉴 영역 w600] ──────
+ *    280 + 40 + (280 + 40 + 280) = 920 = frame 1080 − 좌우 80×2      */
+.order-body {
   flex-shrink: 0;
-  margin: 0 var(--space-side);
-  height: calc(90 * var(--u));
+  margin: 0 var(--space-side);              /* 페이지 양쪽 80 유지 */
   display: flex;
-  gap: var(--space-section);
-  overflow-x: auto;
-  overflow-y: hidden;
+  gap: calc(40 * var(--u));
+}
+
+/* 카테고리: 세로 목록 (w280, 버튼 h100 — 두 줄이면 ~150 자동 확장) */
+.category-col {
+  flex: 0 0 calc(280 * var(--u));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);                /* 버튼 사이 30 */
+  overflow-y: auto;                          /* 카테고리가 늘어나면 내부 스크롤 */
   scrollbar-width: none;
 }
-.category-bar::-webkit-scrollbar { display: none; }
+.category-col::-webkit-scrollbar { display: none; }
 .category-btn {
-  flex: 0 0 calc(180 * var(--u));
-  height: 100%;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: calc(100 * var(--u));
+  padding: calc(12 * var(--u)) calc(16 * var(--u));
   font-size: calc(45 * var(--u));
   font-weight: 500;
+  line-height: 1.15;
   color: var(--color-white);
   background: var(--color-bg);
   border: calc(2 * var(--u)) solid var(--color-white);
   border-radius: var(--radius-md);          /* 20 */
-  white-space: nowrap;
+  word-break: keep-all;                     /* "디저트/베이커리" 2줄 허용 */
 }
 .category-btn.is-active {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
 
-/* ── 메뉴 격자 3×3 (figma 280×300 radius20, bg #3d3d3d, border1 white) ── */
-/*    좌표: left 80/400/720, top 480/810/1140 → col gap 40, row gap 30 */
+/* 메뉴 영역: 격자 + 페이지네이션 세로 배치 */
+.menu-area {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);                /* 격자 ↔ 페이저 30 */
+}
+
+/* ── 메뉴 격자 2×3 고정 (280×300 radius20, bg #3d3d3d, border1 white) ──
+ *    3행을 넘는 셀은 렌더되더라도 잘라낸다 (grid-auto-rows 0 + hidden)
+ *    — 페이지 크기 상수가 어긋나도 레이아웃이 밀리지 않는 방어           */
 .menu-grid {
   flex-shrink: 0;
-  margin: 0 auto;                     /* 가로 중앙. 세로 gap 은 order-scroll 의 gap */
   display: grid;
-  grid-template-columns: repeat(3, calc(280 * var(--u)));
+  grid-template-columns: repeat(2, calc(280 * var(--u)));
   grid-template-rows: repeat(3, calc(300 * var(--u)));
+  grid-auto-rows: 0;
+  overflow: hidden;
   column-gap: calc(40 * var(--u));
   row-gap: var(--space-section);
 }
@@ -126,17 +146,15 @@
   cursor: default;
 }
 
-/* ── 페이지네이션 ◀ ▶ (figma w430 h90 radius10 font 40, gap 60) ── */
+/* ── 페이지네이션 ◀ ▶ (w280 h90 — 메뉴 두 열 아래 정렬) ── */
 .pager {
   flex-shrink: 0;
-  margin: 0 var(--space-side);              /* 좌우 80, 세로 gap 은 부모 gap */
-  height: var(--btn-secondary-h);           /* 90 */
+  height: var(--btn-secondary-h);           /* 90 유지 */
   display: flex;
-  justify-content: center;
-  gap: var(--space-section-l);              /* 60 */
+  gap: calc(40 * var(--u));                 /* 메뉴 열 gap 과 동일 */
 }
 .pager-btn {
-  width: calc(430 * var(--u));
+  width: calc(280 * var(--u));              /* 메뉴 카드 폭과 동일 */
   height: 100%;
   display: inline-flex;
   align-items: center;

@@ -28,7 +28,7 @@
   overflow: hidden;
 }
 
-/* ── 가맹점명 카드 (h105 × w760, header 와 gap 60) ────────── */
+/* ── 가맹점명 카드 (h150 × w760, header 와 gap 60) ────────── */
 /*    main-scroll 시작점 = navbar margin 30 위치
  *    여기서 +30 더 내려가면 header 로부터 60 됨                            */
 .store-name {
@@ -37,11 +37,11 @@
   left: 50%;
   transform: translateX(-50%);
   width: calc(760 * var(--u));
-  height: calc(105 * var(--u));
+  height: calc(150 * var(--u));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(40 * var(--u));
+  font-size: calc(50 * var(--u));
   font-weight: 700;
   color: var(--color-white);
   background: var(--color-bg-2);
@@ -56,7 +56,7 @@
   right: 0;
   margin: 0;
   text-align: center;
-  font-size: calc(50 * var(--u));
+  font-size: calc(60 * var(--u));
   font-weight: 700;
   line-height: 1.4;
   color: var(--color-white);
