@@ -21,6 +21,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // usb-printer-capacitor 플러그인이 의존하는 DantSu
+        // ESCPOS-ThermalPrinter-Android 라이브러리 배포처 (JitPack 전용)
+        maven { url 'https://jitpack.io' }
     }
 }
 

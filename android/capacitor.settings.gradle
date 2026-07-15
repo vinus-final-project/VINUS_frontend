@@ -2,5 +2,8 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':atomsolution-usb-printer-capacitor'
+project(':atomsolution-usb-printer-capacitor').projectDir = new File('../node_modules/@atomsolution/usb-printer-capacitor/android')
+
 include ':capacitor-community-text-to-speech'
 project(':capacitor-community-text-to-speech').projectDir = new File('../node_modules/@capacitor-community/text-to-speech/android')

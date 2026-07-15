@@ -5,6 +5,7 @@ import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
 import { getTossPayments } from "../../utils/toss";
+import { issueOrderNumber } from "../../utils/orderNumber";
 import { lockForPaymentMic, unlockForPaymentMic } from "../../utils/micGate";
 import "./pay.css";
 
@@ -89,6 +90,9 @@ export default function Pay() {
         amount: amountParam,
       });
       if (res?.success) {
+        /* 주문번호 발급 — 결제 확정 시점 1회 (localStorage, 영업일 리셋).
+         * receipt/end 페이지는 peekOrderNumber() 로 조회만 한다. */
+        issueOrderNumber();
         setStatus("done");
       } else {
         console.error("[pay] confirm 실패", res);
