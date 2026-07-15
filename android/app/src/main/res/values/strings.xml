@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VINUS</string>
+    <string name="title_activity_main">VINUS</string>
+    <string name="package_name">com.vinus.kiosk</string>
+    <string name="custom_url_scheme">com.vinus.kiosk</string>
+</resources>
