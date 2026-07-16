@@ -23,6 +23,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 결제 복귀 딥링크: backend /payments/toss/return 응답 페이지가
+                 voiceinus://payment-{success|fail} 로 앱을 전면 복귀시킨다 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="voiceinus" />
+            </intent-filter>
+
         </activity>
 
         <provider

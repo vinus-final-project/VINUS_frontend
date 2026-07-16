@@ -38,7 +38,8 @@ export function resolveRoute({ response_type, fsm_state, order_item, cart, sourc
     // ── 1) response_type 전이 (source 무관) ──────────────────
     switch (response_type) {
         case "PAYMENT_SUCCESS":
-            return "/end";
+            // 영수증 수령 선택(프린터 출력)을 거친 뒤 receipt 가 /end 로 보낸다
+            return "/receipt";
         case "PAYMENT_CANCEL":
             return "/cart";
         case "SESSION_END":
