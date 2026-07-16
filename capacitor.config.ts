@@ -4,14 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.vinus.kiosk',
   appName: 'VINUS',
   webDir: 'dist',
-  server: {
-    // WebView origin 을 http://localhost 로 — 백엔드 CORS allow_origins 에
-    // 이미 있는 origin 이라 백엔드 수정 불필요. https 기본값이면
-    // ① CORS 미허용(https://localhost) ② http API 호출이 mixed content 로
-    // 차단되는 문제가 생긴다. API 가 https 로 바뀌면 이 블록 제거.
-    androidScheme: 'http',
-    cleartext: true,
-  },
+  // API 가 https(api.voice-in-us.com)로 전환됨 — androidScheme 기본값(https)
+  // 사용. https origin → https API 호출이라 mixed content/cleartext 불필요.
+  // backend CORS 에는 "https://localhost" 가 등록되어 있어야 한다.
 };
 
 export default config;

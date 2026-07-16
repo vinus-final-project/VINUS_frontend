@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- usesCleartextTraffic: 백엔드가 http(비암호화)라서 필요.
-         https/wss 전환 시 이 속성과 capacitor.config 의 cleartext 를 함께 제거할 것 -->
+    <!-- API 가 https(api.voice-in-us.com)로 전환됨 — cleartext 불필요 -->
     <application
-        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
