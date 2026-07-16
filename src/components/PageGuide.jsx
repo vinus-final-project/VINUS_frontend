@@ -16,7 +16,7 @@ import { ttsStartedMic, ttsEndedMic, isPaymentLockedMic } from "../utils/micGate
  * 그 응답에 message 가 있으면" 이 전이는 백엔드 안내가 담당 → skip.
  * (음성 이동: applySessionResponse → SessionRouter navigate 순서라
  *  경로가 바뀐 시점엔 seq 전진 + message 세팅이 끝나 있다.
- *  추후 팀원이 에코백 message 를 채우면 자동으로 그쪽이 우선된다.)
+ *  컨트롤러 에코백 message 도 같은 규칙으로 자동 우선된다.)
  *
  * 재생하지 않는 경우:
  *   - 경로가 실제로 바뀌지 않은 재렌더
