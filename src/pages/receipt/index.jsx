@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReceiptModal from "../../components/modal/receiptModal";
-import { ORDER_NUMBER, readOrderNo } from "../../constants";
-import { buildPrintPayload, printReceipt } from "../../utils/printAgent";
+import { ORDER_NUMBER, STORE_NAME } from "../../constants";
+import { peekOrderNumber } from "../../utils/orderNumber";
+import buildReceiptText from "../../utils/receiptText";
 import useCart from "../../hooks/useCart";
-import useSession from "../../hooks/useSession";
+import usePrinter from "../../hooks/usePrinter";
 import receiptPng from "../../assets/receipt.png";
 import "./receipt.css";
 
 export default function Receipt() {
   const navigate = useNavigate();
   const { lastOrder } = useCart();
-  const { order_type } = useSession(); // Toss 리로드 후엔 null 일 수 있음 (줄 생략)
+  const { printReceipt } = usePrinter();
 
-  // 결제 confirm 응답의 실제 주문번호 (SS 백업) — 없으면 임시 상수 fallback
-  const orderNumber = readOrderNo() ?? ORDER_NUMBER;
+  /* 주문번호 — pay 페이지가 결제 확정 시 issueOrderNumber() 로 발급한
+   * 당일 번호를 조회. 발급 이력이 없으면(개발/직접 진입) 임시 상수 fallback */
+  const orderNumber = peekOrderNumber() || ORDER_NUMBER;
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -23,9 +25,21 @@ export default function Receipt() {
   };
 
   const handleReceipt = () => {
-    /* 실물 영수증 출력 — 로컬 프린트 에이전트 (fire-and-forget).
-     * 에이전트 미기동/프린터 오류여도 모달(주문번호+표)은 그대로 표시. */
-    printReceipt(buildPrintPayload(lastOrder, orderNumber, order_type));
+    /* 실물 영수증 출력 — USB 프린터 (fire-and-forget).
+     * 프린터 미연결/출력 실패여도 모달(주문번호 안내)은 그대로 진행.
+     * lastOrder 는 pay 단계 placeOrder() 스냅샷 (SS 백업 — 리로드 생존) */
+    const totalPrice = (lastOrder ?? []).reduce(
+      (s, it) => s + (it.unitPrice ?? 0) * (it.o_m_qty ?? 1),
+      0
+    );
+    printReceipt(
+      buildReceiptText({
+        storeName: STORE_NAME,
+        orderNumber,
+        items: lastOrder ?? [],
+        totalPrice,
+      })
+    );
     setModalOpen(true); // 주문번호 안내 모달 표시
   };
 

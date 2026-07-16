@@ -15,6 +15,22 @@ const api = axios.create({
     },
 });
 
+/* ⚠ TEMP DEBUG — APK 메뉴 미표시 원인 추적용. 원인 확인 후 반드시 제거!
+ * adb 없이 실기기에서 실패 원인을 보기 위해 API 실패를 alert 로 표시 */
+api.interceptors.response.use(
+    (res) => res,
+    (err) => {
+        try {
+            alert(
+                `[API 실패]\nurl: ${err.config?.baseURL}${err.config?.url}\n` +
+                `code: ${err.code}\nmessage: ${err.message}\n` +
+                `status: ${err.response?.status ?? "(no response)"}`
+            );
+        } catch { /* ignore */ }
+        return Promise.reject(err);
+    }
+);
+
 export const buildFileUrl = (filePath) => filePath;
 
 export default api;

@@ -47,8 +47,6 @@ export function resolveRoute({ response_type, fsm_state, order_item, cart, sourc
             return "/cart"; // "장바구니 보여줘"
         case "SHOW_MENU":
             return "/order"; // "돌아가기" / "메뉴 더 볼게"
-        case "SHOW_PAY":
-            return "/pay"; // "카드로 할게요" — pay 페이지가 mount 시 토스 결제창 open
         case "ERROR":
             return null; // 현재 화면 유지 (안내는 별도 처리)
         default:

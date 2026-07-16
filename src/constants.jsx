@@ -3,9 +3,6 @@
  * 값을 바꿀 때 한 곳만 수정하면 됨.
  * ────────────────────────────────────────────────────────────── */
 
-/* 전체 메뉴 페이지: 한 화면에 보일 메뉴 개수 (3 x 3) */
-export const ORDER_PAGE_SIZE = 9;
-
 /* 주문 흐름 페이지(order / orderDetail / cart) 의 자동 종료 타이머 (초) */
 export const MAIN_TIME_LIMIT_SEC = 180;
 
@@ -32,7 +29,7 @@ export const ORDER_NUMBER = 271;
 
 /* ── 페이지 입장 음성 안내 (PageGuide) ─────────────────────────
  * 터치 이동 등 "백엔드 message 없는" 화면 전이에서만 재생된다.
- * 음성 명령으로 이동한 경우 백엔드 message(에코백/안내)가 우선 —
+ * 음성 명령/터치 조작에 백엔드 message(에코백)가 실려 오면 그쪽이 우선 —
  * 우선순위 규칙은 components/PageGuide.jsx 참고.
  * 키는 라우트 경로. 메뉴 상세는 "/menu" prefix 매칭.
  * 없는 페이지(start, pay, end)는 안내 없음:

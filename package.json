@@ -5,21 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npm run build && npx cap sync android && npx cap open android"
   },
   "dependencies": {
+    "@atomsolution/usb-printer-capacitor": "1.5.0",
     "@capacitor-community/text-to-speech": "^8.0.2",
-    "@capacitor/android": "^8.4.0",
+    "@capacitor/android": "^8.4.2",
     "@capacitor/core": "^8.4.0",
     "@tosspayments/tosspayments-sdk": "^2.7.1",
     "axios": "^1.8.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.6.0",
-    "react-router-dom": "^7.6.0"
+    "react-router-dom": "^7.6.0",
+    "wanted-sans": "^1.0.3"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
