@@ -9,8 +9,7 @@
 
 export const formatKRW = (n) => `${(n ?? 0).toLocaleString()}원`;
 
-/* 수량 표시 — unit 생략 시 "개" (합계처럼 혼합 품목엔 기본 단위 사용) */
-export const formatCount = (n, unit = "개") => `${n ?? 0}${unit}`;
+export const formatCount = (n) => `${n ?? 0}개`;
 
 export const formatSeconds = (s) => `${s ?? 0}초`;
 
