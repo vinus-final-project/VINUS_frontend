@@ -31,6 +31,19 @@ let menuBootstrapCache = null;
 /* 캐시 동기 조회 — 페이지가 초기 state 시드용으로 사용 */
 export const getMenuBootstrapCache = () => menuBootstrapCache;
 
+/* ── 수량 단위 조회 (디저트 "개" / 음료 "잔") ─────────────────
+ * 부트스트랩 캐시의 c_name 기준. 캐시 미적재/미발견 시 "개" 폴백.
+ * (백엔드 에코백의 단위 규칙과 동일 — ruleEngine 메뉴 메타 캐시)      */
+export const getMenuUnit = (menuId) => {
+    if (!menuBootstrapCache || menuId == null) return "개";
+    const menu = (menuBootstrapCache.menus ?? []).find((m) => m.m_id === menuId);
+    if (!menu) return "개";
+    const cat = (menuBootstrapCache.categories ?? []).find(
+        (c) => c.c_id === menu.c_id
+    );
+    return cat && cat.c_name.includes("디저트") ? "개" : "잔";
+};
+
 const useMenu = () => {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
