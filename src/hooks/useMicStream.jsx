@@ -4,6 +4,7 @@ import {
     bargeInMic,
     isPaymentLockedMic,
 } from "../utils/micGate";
+import { markUtteranceEnd } from "../utils/perfTrace";
 
 /* ──────────────────────────────────────────────────────────────
  * useMicStream — 마이크 → Noise Gate → 16kHz mono Int16 PCM 스트림
@@ -212,6 +213,7 @@ export function useMicStream({ onChunk } = {}) {
                 for (let i = 0; i < EOS_PADDING_CHUNKS; i++) {
                     onChunkRef.current?.(SILENT_CHUNK);
                 }
+                markUtteranceEnd(); // [perf] T0 — 발화 종료 (측정용)
             }
         } else {
             // ── 게이트 CLOSED ────────────────────────
