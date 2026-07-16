@@ -26,3 +26,27 @@ export const STORE_NAME = "가맹점명";
 
 /* receipt 임시 주문 번호 (추후 SessionResponse 또는 결제 응답으로 교체) */
 export const ORDER_NUMBER = 271;
+
+/* ── 페이지 입장 음성 안내 (PageGuide) ─────────────────────────
+ * 터치 이동 등 "백엔드 message 없는" 화면 전이에서만 재생된다.
+ * 음성 명령/터치 조작에 백엔드 message(에코백)가 실려 오면 그쪽이 우선 —
+ * 우선순위 규칙은 components/PageGuide.jsx 참고.
+ * 키는 라우트 경로. 메뉴 상세는 "/menu" prefix 매칭.
+ * 없는 페이지(start, pay, end)는 안내 없음:
+ *   start — 대기 화면, pay — 결제 잠금(micGate), end — PAYMENT_SUCCESS
+ *   message 가 이미 안내.                                             */
+export const PAGE_GUIDE_TEXT = {
+    "/main": "매장에서 드시면 매장, 가져가시면 포장을 선택해주세요.",
+    "/order": "주문하실 메뉴를 말씀하시거나 화면에서 선택해주세요.",
+    "/menu": "옵션을 선택해주세요. 다 고르셨으면 주문 완료라고 말씀해주세요.",
+    "/cart": "주문 내역을 확인해주세요. 결제하시려면 결제할게요라고 말씀해주세요.",
+    "/payment": "결제 수단을 선택해주세요.",
+    "/receipt": "영수증이 필요하시면 영수증 받기 버튼을 눌러주세요.",
+};
+
+/* 경로 → 안내 문구 (없으면 null). 메뉴 상세(/menu/3 등)는 prefix 매칭 */
+export const resolvePageGuideText = (pathname) => {
+    if (PAGE_GUIDE_TEXT[pathname]) return PAGE_GUIDE_TEXT[pathname];
+    if (pathname.startsWith("/menu/")) return PAGE_GUIDE_TEXT["/menu"];
+    return null;
+};

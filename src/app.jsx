@@ -9,6 +9,7 @@ import {
 import { CartProvider } from "./hooks/useCart";
 import { SessionProvider } from "./hooks/useSession";
 import { WebSocketProvider } from "./hooks/useWebSocket";
+import PageGuide from "./components/PageGuide";
 import SessionRouter from "./components/SessionRouter";
 import TtsPlayer from "./components/TtsPlayer";
 import VoiceCapture from "./components/VoiceCapture";
@@ -98,6 +99,8 @@ const RootLayout = () => {
         <VoiceCapture />
         {/* SessionResponse.message → Polly TTS 재생 (렌더 없음, 전역 상주) */}
         <TtsPlayer />
+        {/* message 없는 화면 전이(터치 이동 등) → 페이지 입장 안내 재생 */}
+        <PageGuide />
         <Outlet />
         {/* 전역 팝업/모달이 필요하면 여기에 배치 (예: <InterferencePopup />) */}
       </div>
