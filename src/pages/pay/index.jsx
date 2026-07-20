@@ -5,7 +5,6 @@ import { Capacitor } from "@capacitor/core";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
-import api from "../../utils/api";
 import { getTossPayments } from "../../utils/toss";
 import { issueOrderNumber } from "../../utils/orderNumber";
 import { lockForPaymentMic, unlockForPaymentMic } from "../../utils/micGate";
@@ -166,23 +165,20 @@ export default function Pay() {
        *   (placeOrder 는 SS vinus.cart.lastOrder 에 백업되므로 리로드 생존) */
       placeOrder();
 
-      /* successUrl/failUrl — 플랫폼 분기:
+      /* successUrl/failUrl — 웹/APK 공통 (내부 WebView 설계):
        *
-       * ▸ apk(native): 토스 결제창이 "외부 크롬"에서 열리므로
-       *   https://localhost(앱)는 크롬이 접근 불가(ERR_CONNECTION_REFUSED).
-       *   → backend /payments/toss/return 으로 지정. backend 가 승인(confirm)
-       *     까지 처리하고 WS PAYMENT_SUCCESS push 로 이 화면(살아있음)을
-       *     전환시킨 뒤, voiceinus:// 딥링크로 앱을 전면 복귀시킨다.
-       *     (실패도 같은 엔드포인트 — code 쿼리로 구분)
+       * capacitor.config 의 allowNavigation 으로 토스 결제창이 앱 WebView
+       * "안"에서 열린다 (키오스크 봉인 — 외부 크롬 이탈 없음). 결제 후
+       * 토스가 https://localhost/pay?result=... 로 리다이렉트하면 Capacitor
+       * 가 자기 origin 이라 앱을 다시 로드하고, 아래 confirm 흐름이
+       * 웹(dev)과 동일하게 이어진다 (session_id/lastOrder 는 SS 백업 생존).
+       * 카드사 앱(intent://) 호출은 MainActivity.handlePaymentScheme 담당.
        *
-       * ▸ PC 웹(dev): 기존 그대로 같은 탭 리다이렉트 복귀 흐름.            */
-      const isNative = Capacitor.isNativePlatform();
-      const successUrl = isNative
-        ? `${api.defaults.baseURL}/payments/toss/return`
-        : `${window.location.origin}/pay?result=success`;
-      const failUrl = isNative
-        ? `${api.defaults.baseURL}/payments/toss/return`
-        : `${window.location.origin}/pay?result=fail`;
+       * (구) 외부 크롬 + backend /toss/return + voiceinus:// 딥링크 설계는
+       * 폐기 — 합의 후 내부 WebView 방식으로 단일화 (2026-07-21).
+       * backend 엔드포인트/딥링크 리스너는 데드코드로 남아 있으며 무해.     */
+      const successUrl = `${window.location.origin}/pay?result=success`;
+      const failUrl = `${window.location.origin}/pay?result=fail`;
 
       try {
         const toss = await getTossPayments();
