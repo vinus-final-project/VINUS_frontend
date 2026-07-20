@@ -45,6 +45,30 @@
         </provider>
     </application>
 
+    <!-- 결제 앱 패키지 가시성 (Android 11+) — 토스 결제창이 intent:// 로
+         호출하는 간편결제/앱카드 앱을 startActivity 로 열 수 있게 등록.
+         (MainActivity.handlePaymentScheme 와 세트) -->
+    <queries>
+        <package android:name="com.kakao.talk" />                <!-- 카카오톡(카카오페이) -->
+        <package android:name="com.kakaopay.app" />              <!-- 카카오페이 -->
+        <package android:name="viva.republica.toss" />           <!-- 토스 -->
+        <package android:name="com.nhnent.payapp" />             <!-- 페이코 -->
+        <package android:name="com.samsung.android.spay" />      <!-- 삼성페이 -->
+        <package android:name="kvp.jjy.MispAndroid320" />        <!-- ISP/페이북 -->
+        <package android:name="com.shcard.smartpay" />           <!-- 신한 -->
+        <package android:name="com.kbcard.cxh.appcard" />        <!-- KB -->
+        <package android:name="com.hyundaicard.appcard" />       <!-- 현대 -->
+        <package android:name="kr.co.samsungcard.mpocket" />     <!-- 삼성카드 -->
+        <package android:name="com.lcacApp" />                   <!-- 롯데 -->
+        <package android:name="com.hanaskcard.paycla" />         <!-- 하나 -->
+        <package android:name="com.wooricard.smartapp" />        <!-- 우리 -->
+        <package android:name="nh.smart.nhallonepay" />          <!-- NH -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="intent" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
