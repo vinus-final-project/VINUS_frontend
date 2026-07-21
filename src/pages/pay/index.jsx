@@ -5,7 +5,6 @@ import { Capacitor } from "@capacitor/core";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
-import { SS_OD_NO_KEY } from "../../constants";
 import { getTossPayments } from "../../utils/toss";
 import { issueOrderNumber } from "../../utils/orderNumber";
 import { lockForPaymentMic, unlockForPaymentMic } from "../../utils/micGate";

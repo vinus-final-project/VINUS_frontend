@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AUTO_HOME_SEC, LIST_SCROLL_STEP, readOrderNo } from "../../constants";
+import { AUTO_HOME_SEC, LIST_SCROLL_STEP} from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import useCart from "../../hooks/useCart";
 import useMenu, { getMenuUnit } from "../../hooks/useMenu";
