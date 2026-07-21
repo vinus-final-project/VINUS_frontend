@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { START_HOLD_MS as HOLD_MS } from "../../constants";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
@@ -28,6 +28,12 @@ export default function Start() {
   const holdTimerRef = useRef(null);
   const heldKeyRef = useRef(null);
   const pointerHoldingRef = useRef(false);
+  /*  3초 hold 시각화:
+   *    - isHolding : SVG 마운트/애니메이션 스위치
+   *    - holdPos   : 실제 터치 좌표 (viewport 기준 px). 포인터 hold 만 세팅.
+   *                  키보드 hold 는 좌표가 없으므로 null → 프로그레스 표시 안 함. */
+  const [isHolding, setIsHolding] = useState(false);
+  const [holdPos, setHoldPos] = useState(null);
 
   /* start(/) 진입 = 새 손님/새 시작 — 세션 정리의 "이탈 수렴점".
    * "처음으로" 버튼 / 결제 도중 이탈 / F5 / 직접 입력 전부 여기로 온다.
@@ -42,10 +48,12 @@ export default function Start() {
 
   const startHold = () => {
     if (holdTimerRef.current) return;
+    setIsHolding(true);
     holdTimerRef.current = setTimeout(() => {
       holdTimerRef.current = null;
       heldKeyRef.current = null;
       pointerHoldingRef.current = false;
+      setIsHolding(false);
       navigate("/main");
     }, HOLD_MS);
   };
@@ -56,6 +64,8 @@ export default function Start() {
     holdTimerRef.current = null;
     heldKeyRef.current = null;
     pointerHoldingRef.current = false;
+    setIsHolding(false);
+    setHoldPos(null);
   };
 
   /* 키보드 hold */
@@ -78,9 +88,10 @@ export default function Start() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* 포인터 hold (마우스/터치) */
-  const onPointerDown = () => {
+  /* 포인터 hold (마우스/터치) — 실제 터치 좌표를 저장해 그 자리에 프로그레스 표시 */
+  const onPointerDown = (e) => {
     pointerHoldingRef.current = true;
+    setHoldPos({ x: e.clientX, y: e.clientY });
     startHold();
   };
   const onPointerEndAny = () => {
@@ -106,6 +117,26 @@ export default function Start() {
     >
       <img className="start-icon" src={iconLight} alt="" aria-hidden="true" />
       <img className="start-logo-text" src={textLight} alt="vinus" />
+
+      {/* 3초 hold 원형 프로그레스 — 실제 터치 좌표에 작게 표시.
+          키보드 hold(dev)는 holdPos 가 없어 렌더 안 함. */}
+      {isHolding && holdPos && (
+        <svg
+          className="hold-progress"
+          viewBox="0 0 100 100"
+          style={{
+            "--hold-ms": `${HOLD_MS}ms`,
+            left: `${holdPos.x}px`,
+            top: `${holdPos.y}px`,
+          }}
+          aria-hidden="true"
+        >
+          {/* 배경 링 */}
+          <circle className="hold-progress-bg" cx="50" cy="50" r="45" />
+          {/* 진행 링 — CSS keyframes 로 3초에 걸쳐 채워짐 */}
+          <circle className="hold-progress-arc" cx="50" cy="50" r="45" />
+        </svg>
+      )}
     </div>
   );
 }
