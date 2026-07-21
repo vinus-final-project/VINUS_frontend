@@ -39,7 +39,7 @@ const SAMPLE_RATE = 16000;
 const CHUNK_SIZE = 1024;         // ~64ms @16kHz (워크릿이 이 크기로 모아서 보냄)
 
 // ---- Noise Gate 튜닝 대상 ----
-const THRESHOLD_DB = -15;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
+const THRESHOLD_DB = -5;        // 게이트 여는 데시벨 (환경 소음에 맞춰 조절)
                                  //   조용한 방 바닥소음 ≈ -60 ~ -70dB
                                  //   보통 발화        ≈ -35 ~ -20dB
 // barge-in 임계값 — TTS 재생 중에는 이 값 이상만 발화로 인정.
