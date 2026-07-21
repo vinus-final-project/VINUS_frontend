@@ -46,6 +46,23 @@ if (typeof window !== "undefined" && window.speechSynthesis) {
     window.speechSynthesis.addEventListener?.("voiceschanged", pickKoVoice);
 }
 
+/* ── 네이티브 TTS 엔진 웜업 (APK, 모듈 로드 시 1회) ──────────
+ * 안드로이드 TTS 엔진은 초기화에 1~3초가 걸려, 앱 시작 직후의 첫
+ * 발화(/main 입장 안내)가 엔진 준비 전에 조용히 버려질 수 있다.
+ * 부팅 시 무음(volume 0) 발화로 엔진을 미리 깨워둔다 — start 홀드
+ * 2초 동안 초기화가 끝나 실제 첫 안내가 정상 재생된다. 실패 무시. */
+if (Capacitor.isNativePlatform()) {
+    TextToSpeech.speak({
+        text: " ",
+        lang: "ko-KR",
+        rate: 1.0,
+        pitch: 1.0,
+        volume: 0,
+    }).catch(() => {
+        /* 엔진 미준비/미설치 — 웜업 실패는 무시 (본 발화에서 재시도됨) */
+    });
+}
+
 const useTts = () => {
     const [error, setError] = useState("");
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -62,7 +79,12 @@ const useTts = () => {
             onEnd?.();
         };
         try {
-            await TextToSpeech.stop(); // 이전 안내 중단 (최신 우선)
+            try {
+                await TextToSpeech.stop(); // 이전 안내 중단 (최신 우선)
+            } catch {
+                /* 엔진 미준비 등으로 stop 이 실패해도 speak 는 진행 —
+                 * 같은 try 에 있으면 첫 발화가 통째로 삼켜진다 */
+            }
             if (genRef.current !== gen) return; // stop 사이 새 speak 발생
             setIsSpeaking(true);
             onStart?.();
