@@ -22,7 +22,7 @@ export const AUTO_HOME_SEC = 5;
 export const LIST_SCROLL_STEP = 230;
 
 /* 매장 정보 (임시 상수 — 추후 backend 세팅 API 로 교체 예정) */
-export const STORE_NAME = "가맹점명";
+export const STORE_NAME = "VINUS 종로점";
 
 /* receipt 임시 주문 번호 — 결제 응답(od_no) 유실 시 fallback 표시용 */
 export const ORDER_NUMBER = 271;
@@ -41,7 +41,7 @@ export const PAGE_GUIDE_TEXT = {
     "/menu": "옵션을 선택해주세요. 다 고르셨으면 주문 완료라고 말씀해주세요.",
     "/cart": "주문 내역을 확인해주세요. 결제하시려면 결제할게요라고 말씀해주세요.",
     "/payment": "결제 수단을 선택해주세요.",
-    "/receipt": "영수증이 필요하시면 영수증 받기 버튼을 눌러주세요.",
+    "/receipt": "영수증이 필요하시면 영수증 받기를 선택해주세요.",
 };
 
 /* 경로 → 안내 문구 (없으면 null). 메뉴 상세(/menu/3 등)는 prefix 매칭 */

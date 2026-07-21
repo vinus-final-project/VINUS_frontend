@@ -12,7 +12,9 @@
  *   //   [{ m_name, o_m_qty, unitPrice, options: [{op_name, qty}] }]
  * ────────────────────────────────────────────────────────────── */
 
-const COLS = 32; // 58mm 프린터 기준 (80mm 는 48)
+import { STORE_NAME } from "../constants"
+
+const COLS = 42; // 80mm 표준 프린터 기준 (58mm 소형은 32)
 
 /* 표시폭 계산 — 한글/전각 2칸, 그 외 1칸 */
 const displayWidth = (s) =>
@@ -39,7 +41,7 @@ const formatWon = (n) => `${(n ?? 0).toLocaleString()}원`;
 export const formatOrderNo = (n) => String(n ?? 0).padStart(3, "0");
 
 export const buildReceiptText = ({
-    storeName,
+    storeName = STORE_NAME,
     orderNumber, // 숫자(3자리 패딩) 또는 주문 코드 문자열("A-0714-001") 모두 허용
     items = [],
     totalPrice = 0,
