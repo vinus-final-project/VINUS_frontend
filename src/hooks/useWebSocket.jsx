@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, } from "react";
 import useSession from "./useSession";
+import { markResponse } from "../utils/perfTrace";
 
 /* ──────────────────────────────────────────────────────────────
  * useWebSocket — /ws/voice 연결/송수신 (Context + Custom Hook)
@@ -77,6 +78,7 @@ export const WebSocketProvider = ({ children }) => {
                     // backend → frontend 는 JSON only (SessionResponse)
                     if (typeof event.data === "string") {
                         try {
+                            markResponse(); // [perf] T1 — 응답 수신 (측정용)
                             const json = JSON.parse(event.data);
                             // WS 응답 = 음성 발화 결과 → "voice" 출처로 반영
                             // (SessionRouter 가 fsm_state 기반 강제 라우팅 수행)

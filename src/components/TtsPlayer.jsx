@@ -8,6 +8,7 @@ import {
     setTtsStopperMic,
     isPaymentLockedMic,
 } from "../utils/micGate";
+import { markTtsStart } from "../utils/perfTrace";
 
 /* ──────────────────────────────────────────────────────────────
  * TtsPlayer — SessionResponse.message 자동 음성 안내 (전역 상주)
@@ -64,7 +65,10 @@ export default function TtsPlayer() {
         // 재생 동안 barge-in 모드 진입/해제는 utterance 이벤트에 연동
         //   (onEnd 는 정상 종료·취소·오류 모두에서 1회 보장 — useTts)
         speak(message, {
-            onStart: ttsStartedMic,
+            onStart: () => {
+                ttsStartedMic();
+                markTtsStart(); // [perf] T2 — TTS 재생 시작 (측정용)
+            },
             onEnd: ttsEndedMic,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps

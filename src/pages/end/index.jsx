@@ -50,8 +50,8 @@ export default function End() {
       price: it.unitPrice * it.o_m_qty,
       // 선택된 옵션 텍스트 (cart 페이지와 동일 포맷 — 누적 옵션은 개수 표시)
       opts: (it.options ?? [])
-        .map((op) => (op.qty > 1 ? `${op.op_name} ${op.qty}개` : op.op_name))
-        .join(", "),
+          .map((op) => (op.qty > 1 ? `${op.op_name} ${op.qty}개` : op.op_name))
+          .join(", "),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastOrder, unitReady]);
@@ -103,69 +103,64 @@ export default function End() {
   const handleHome = () => cleanupAndGoHome();
 
   return (
-    <main className="kiosk-scroll end-scroll">
-      {/* 감사 문구 + 주문번호 + 자동 복귀 안내 */}
-      <div className="end-head">
-        <h1 className="end-title">이용해 주셔서 감사합니다</h1>
-        {readOrderNo() && (
-          <p className="end-orderno">
-            주문번호 <span className="end-orderno-num">{readOrderNo()}</span>
+      <main className="kiosk-scroll end-scroll">
+        {/* 감사 문구 + 자동 복귀 안내 */}
+        <div className="end-head">
+          <h1 className="end-title">이용해 주셔서 감사합니다</h1>
+          <p className="end-sub">
+            <span className="end-sec">{seconds}초</span> 후 처음으로 돌아갑니다
           </p>
-        )}
-        <p className="end-sub">
-          <span className="end-sec">{seconds}초</span> 후 처음으로 돌아갑니다
-        </p>
-      </div>
+        </div>
 
-      {/* 결제 내역 리스트 + 우측 ▲▼ 스크롤 (cart 와 동일 구조, 수량 표시 추가) */}
-      <div className="list-area">
-        <div className="end-list" ref={listRef}>
-          {displayItems.map((item) => (
-            <div
-              className={`end-item${item.opts ? " has-opts" : ""}`}
-              key={item.id}
+        {/* 결제 내역 리스트 + 우측 ▲▼ 스크롤 (cart 와 동일 구조, 수량 표시 추가) */}
+        <div className="list-area">
+          <div className="end-list" ref={listRef}>
+            {displayItems.map((item) => (
+                <div
+                    className={`end-item${item.opts ? " has-opts" : ""}`}
+                    key={item.id}
+                >
+                  <span className="end-name">{item.name}</span>
+                  {/* 선택된 옵션 — 메뉴명 아래 (cart 카드와 동일 방식) */}
+                  {item.opts && <span className="end-opts">{item.opts}</span>}
+                  <span className="end-count">{formatCount(item.count, item.unit)}</span>
+                  <span className="end-price">{formatKRW(item.price)}</span>
+                </div>
+            ))}
+          </div>
+
+          <div className="list-scrollbtns">
+            <button
+                className="end-scroll-btn"
+                onClick={() => scrollList(-1)}
+                aria-label="목록 위로 스크롤"
             >
-              <span className="end-name">{item.name}</span>
-              {/* 선택된 옵션 — 메뉴명 아래 (cart 카드와 동일 방식) */}
-              {item.opts && <span className="end-opts">{item.opts}</span>}
-              <span className="end-count">{formatCount(item.count, item.unit)}</span>
-              <span className="end-price">{formatKRW(item.price)}</span>
-            </div>
-          ))}
+              ▲
+            </button>
+            <button
+                className="end-scroll-btn"
+                onClick={() => scrollList(1)}
+                aria-label="목록 아래로 스크롤"
+            >
+              ▼
+            </button>
+          </div>
         </div>
 
-        <div className="list-scrollbtns">
-          <button
-            className="end-scroll-btn"
-            onClick={() => scrollList(-1)}
-            aria-label="목록 위로 스크롤"
-          >
-            ▲
-          </button>
-          <button
-            className="end-scroll-btn"
-            onClick={() => scrollList(1)}
-            aria-label="목록 아래로 스크롤"
-          >
-            ▼
-          </button>
-        </div>
-      </div>
-
-      {/* 처음으로 버튼 (footer 없이 frame 바닥에서 100u 위) */}
-      <button className="home-btn" onClick={handleHome} aria-label="처음으로">
-        <svg className="home-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M3 11.5 12 4l9 7.5M5 10v9h5v-5h4v5h5v-9"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </svg>
-        처음으로
-      </button>
-    </main>
+        {/* 처음으로 버튼 (footer 없이 frame 바닥에서 100u 위) */}
+        <button className="home-btn" onClick={handleHome} aria-label="처음으로">
+          <svg className="home-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                d="M3 11.5 12 4l9 7.5M5 10v9h5v-5h4v5h5v-9"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            />
+          </svg>
+          처음으로
+        </button>
+      </main>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ANONYMOUS } from "@tosspayments/tosspayments-sdk";
+import { Capacitor } from "@capacitor/core";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
@@ -61,6 +62,38 @@ export default function Pay() {
     lockForPaymentMic();
     return () => unlockForPaymentMic();
   }, []);
+
+  /* ── (native) 딥링크 수신 — voiceinus://payment-{success|fail} ──
+   *   backend /payments/toss/return 이 승인 처리 후 앱을 딥링크로
+   *   복귀시킨다. 성공은 보통 WS PAYMENT_SUCCESS push 가 먼저 화면을
+   *   전환하므로(SessionRouter), 여기의 success 처리는 WS 유실 대비
+   *   백업. 실패는 이 경로가 유일한 통지다.                            */
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handle;
+    (async () => {
+      const { App } = await import("@capacitor/app");
+      handle = await App.addListener("appUrlOpen", ({ url }) => {
+        if (!url) return;
+        if (url.startsWith("voiceinus://payment-fail")) {
+          setStatus("fail");
+        } else if (url.startsWith("voiceinus://payment-success")) {
+          setStatus("done"); // WS push 가 먼저 왔다면 이미 페이지 이탈됨
+        }
+      });
+    })();
+    return () => handle?.remove();
+  }, []);
+
+  /* ── (native) 무응답 워치독 — 외부 결제창에서 사용자가 창을 닫는 등
+   *   딥링크도 WS push 도 없이 돌아오지 못하는 경우 3분 후 결제방법
+   *   선택으로 복귀 (키오스크가 영원히 "결제 중"에 갇히는 것 방지)      */
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (status !== "processing") return;
+    const id = setTimeout(() => navigate("/payment"), 180_000);
+    return () => clearTimeout(id);
+  }, [status, navigate]);
 
   /* ── URL 정리 — result 판독 후 즉시 /pay 로 replaceState ─
    * 뒤로가기/재진입 시 이전 결과가 다시 판독되는 것을 방지.  */
@@ -133,6 +166,18 @@ export default function Pay() {
        *   (placeOrder 는 SS vinus.cart.lastOrder 에 백업되므로 리로드 생존) */
       placeOrder();
 
+      /* successUrl/failUrl — 웹/APK 공통 (내부 WebView 설계):
+       *
+       * capacitor.config 의 allowNavigation 으로 토스 결제창이 앱 WebView
+       * "안"에서 열린다 (키오스크 봉인 — 외부 크롬 이탈 없음). 결제 후
+       * 토스가 https://localhost/pay?result=... 로 리다이렉트하면 Capacitor
+       * 가 자기 origin 이라 앱을 다시 로드하고, 아래 confirm 흐름이
+       * 웹(dev)과 동일하게 이어진다 (session_id/lastOrder 는 SS 백업 생존).
+       * 카드사 앱(intent://) 호출은 MainActivity.handlePaymentScheme 담당.
+       *
+       * (구) 외부 크롬 + backend /toss/return + voiceinus:// 딥링크 설계는
+       * 폐기 — 합의 후 내부 WebView 방식으로 단일화 (2026-07-21).
+       * backend 엔드포인트/딥링크 리스너는 데드코드로 남아 있으며 무해.     */
       const successUrl = `${window.location.origin}/pay?result=success`;
       const failUrl = `${window.location.origin}/pay?result=fail`;
 
