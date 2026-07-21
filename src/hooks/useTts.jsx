@@ -55,7 +55,7 @@ if (Capacitor.isNativePlatform()) {
     TextToSpeech.speak({
         text: " ",
         lang: "ko-KR",
-        rate: 1.0,
+        rate: 1.5,
         pitch: 1.0,
         volume: 0,
     }).catch(() => {
