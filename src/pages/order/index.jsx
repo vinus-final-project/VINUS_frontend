@@ -69,6 +69,9 @@ export default function Order() {
     session_id,
     applySessionResponse,
     category: voiceCategory, // 음성 카테고리 전환 힌트 (SHOW_MENU 응답의 c_name)
+    page_move: voicePageMove, // 음성 페이지 넘김 힌트 ("NEXT"|"PREV")
+    page_index: voicePageIndex, // 절대 페이지 (메뉴 낭독 — 화면 동기화)
+    responseSeq,
   } = useSession();
   const { createSession } = useSessionApi();
   const { createOrder } = useOrder();
@@ -107,6 +110,38 @@ export default function Order() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceCategory, categories]);
+
+  /* ── 음성 페이지 넘김 ("다음 페이지" → NEXT/PREV) ─────────
+   *    responseSeq 기반 — 같은 방향 연속 발화도 매번 동작.
+   *    범위 클램프(0 ~ totalPages-1)는 페이지 수를 아는 프론트 담당.   */
+  useEffect(() => {
+    if (!voicePageMove) return;
+    setPage((p) => {
+      const next = voicePageMove === "NEXT" ? p + 1 : p - 1;
+      const total = Math.max(
+        1,
+        Math.ceil(
+          (category === "전체"
+            ? allMenus.length
+            : allMenus.filter((m) => m.category === category).length) / PAGE_SIZE
+        )
+      );
+      return Math.min(Math.max(next, 0), total - 1);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [responseSeq]);
+
+  /* ── 절대 페이지 지정 (메뉴 낭독 — "커피 뭐 있어"/"다음") ──
+   *    backend 가 낭독 중인 페이지 번호를 내려보내 화면을 동기화.
+   *    클램프는 backend(총개수 아는 쪽)가 이미 수행 — 그대로 반영.
+   *    카테고리 전환 effect 보다 뒤에 배치 — 같은 응답에 category 와
+   *    page_index 가 함께 오면 절대 페이지가 최종 승자.               */
+  useEffect(() => {
+    if (typeof voicePageIndex === "number") {
+      setPage(voicePageIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [responseSeq]);
 
   /* ── 마운트 시 카테고리 + 전체 메뉴 일괄 fetch (GET /menus/all 1회) ──
    *    기존 6회 호출(카테고리 1 + 카테고리별 메뉴 5)을 1회로 축소.
