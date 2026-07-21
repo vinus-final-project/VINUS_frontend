@@ -71,7 +71,7 @@ const useTts = () => {
             await TextToSpeech.speak({
                 text,
                 lang: "ko-KR",
-                rate: 1.0,   // 재생 속도 (시각장애인 사용자 대상 튜닝 지점)
+                rate: 1.5,   // 재생 속도 (시각장애인 사용자 대상 튜닝 지점)
                 pitch: 1.0,
                 volume: 1.0,
             });
@@ -94,7 +94,7 @@ const useTts = () => {
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = "ko-KR";
         if (koVoice) utter.voice = koVoice;
-        utter.rate = 1.0;
+        utter.rate = 1.5;
         utter.pitch = 1.0;
 
         /* onEnd 1회 보장 — cancel() 시 브라우저에 따라 onend 대신

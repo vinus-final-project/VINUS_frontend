@@ -31,6 +31,51 @@
   pointer-events: none;
 }
 
+/* ─── 3초 hold 원형 프로그레스바 ───────────────────────────
+ * 실제 터치 좌표(viewport 기준 px)에 작게 표시된다.
+ *   ▸ position: fixed + inline style(left/top)로 좌표 배치
+ *   ▸ transform: translate(-50%, -50%) 로 원의 중심을 그 좌표에 맞춤
+ *   ▸ isHolding && holdPos 일 때만 마운트되어 keyframes 시작,
+ *     취소 시 언마운트 → 즉시 사라짐
+ *   ▸ --hold-ms 는 JS 상수(START_HOLD_MS)를 인라인 style 로 주입
+ * circle r=45 → circumference = 2π·45 ≈ 282.743                */
+.hold-progress {
+  position: fixed;
+  width: calc(160 * var(--u));
+  height: calc(160 * var(--u));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 100;
+  overflow: visible;
+}
+
+.hold-progress-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 4;
+}
+
+.hold-progress-arc {
+  fill: none;
+  stroke: var(--color-white, #ffffff);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 282.743;
+  stroke-dashoffset: 282.743;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  animation: hold-progress-fill var(--hold-ms, 3000ms) linear forwards;
+}
+
+@keyframes hold-progress-fill {
+  from {
+    stroke-dashoffset: 282.743;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* 워드마크 (vinus) */
 .start-logo-text {
   width: calc(600 * var(--u));
