@@ -41,8 +41,8 @@
  * circle r=45 → circumference = 2π·45 ≈ 282.743                */
 .hold-progress {
   position: fixed;
-  width: calc(160 * var(--u));
-  height: calc(160 * var(--u));
+  width: calc(240 * var(--u));
+  height: calc(240 * var(--u));
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 100;
@@ -52,13 +52,13 @@
 .hold-progress-bg {
   fill: none;
   stroke: rgba(255, 255, 255, 0.2);
-  stroke-width: 4;
+  stroke-width: 6;
 }
 
 .hold-progress-arc {
   fill: none;
   stroke: var(--color-white, #ffffff);
-  stroke-width: 5;
+  stroke-width: 7.5;
   stroke-linecap: round;
   stroke-dasharray: 282.743;
   stroke-dashoffset: 282.743;
