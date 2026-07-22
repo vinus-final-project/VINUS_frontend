@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { AUTO_HOME_SEC, LIST_SCROLL_STEP } from "../../constants";
+import { useNavigate, useLocation } from "react-router-dom";
+import { AUTO_HOME_SEC, LIST_SCROLL_STEP, ORDER_NUMBER } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
+import { peekOrderNumber } from "../../utils/orderNumber";
 import useCart from "../../hooks/useCart";
 import useMenu, { getMenuUnit } from "../../hooks/useMenu";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
 import useTts from "../../hooks/useTts";
 import { ttsStartedMic, ttsEndedMic } from "../../utils/micGate";
+import OrderSummaryModal from "../../components/modal/orderSummaryModal";
 import "./end.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -20,10 +22,18 @@ import "./end.css";
 
 export default function End() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { lastOrder } = useCart();
   const cleanup = useSessionCleanup();
   const { getAllMenus } = useMenu();
   const { speak } = useTts();
+
+  /* receipt 페이지가 "영수증 안 받기" 를 선택했을 때만 state.showSummary=true.
+   *   3초간 주문내역 팝업(OrderSummaryModal) 표시.                              */
+  const [summaryOpen, setSummaryOpen] = useState(
+    !!location.state?.showSummary
+  );
+  const orderNumber = peekOrderNumber() || ORDER_NUMBER;
 
   /*  수량 단위(잔/개) 판정용 부트스트랩 캐시 웜업.
    *  Toss 리다이렉트 full reload 후엔 order 페이지를 안 거쳐 캐시가
@@ -124,6 +134,7 @@ export default function End() {
   const handleHome = () => cleanupAndGoHome();
 
   return (
+    <>
       <main className="kiosk-scroll end-scroll">
         {/* 감사 문구 + 자동 복귀 안내 */}
         <div className="end-head">
@@ -183,5 +194,15 @@ export default function End() {
           처음으로
         </button>
       </main>
+
+      {/* 영수증 안 받기 선택 시 진입 직후 주문내역 팝업 3초 표시 */}
+      {summaryOpen && (
+        <OrderSummaryModal
+          orderNumber={orderNumber}
+          autoCloseMs={3000}
+          onClose={() => setSummaryOpen(false)}
+        />
+      )}
+    </>
   );
 }

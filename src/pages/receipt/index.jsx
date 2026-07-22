@@ -58,7 +58,8 @@ export default function Receipt() {
   const handleNoReceipt = () => {
     if (firedRef.current) return;
     firedRef.current = true;
-    navigate("/end");
+    // end 페이지에 "안 받기 → 주문내역 팝업 잠깐 표시" 지시 전달
+    navigate("/end", { state: { showSummary: true } });
   };
 
   const handleReceipt = () => {
@@ -123,7 +124,7 @@ export default function Receipt() {
   const handleIntroClose = () => {
     setIntroModalOpen(false);
     speak(
-      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 10초간 기다려주세요.",
+      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 13초간 기다려주세요.",
       { onStart: ttsStartedMic, onEnd: ttsEndedMic }
     );
     autoSkipTimerRef.current = setTimeout(() => {

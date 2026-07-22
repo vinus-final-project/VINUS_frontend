@@ -13,14 +13,14 @@ export const RECEIPT_AUTO_END_MS = 3000;
 export const START_HOLD_MS = 2000;
 
 /* receipt: 화면 아무 곳이나 눌러 영수증 인쇄를 트리거하는 시간 (ms) */
-export const RECEIPT_HOLD_MS = 3000;
+export const RECEIPT_HOLD_MS = 2000;
 
 /* receipt: 아무 조작 없이 대기 시 자동으로 "영수증 안 받기" 처리 (ms).
  *   음성 UI 사용자 대응 — 응답이 없으면 넘어가도록. */
-export const RECEIPT_AUTO_SKIP_MS = 10000;
+export const RECEIPT_AUTO_SKIP_MS = 12000;
 
 /* end: 결제 완료 후 자동으로 처음으로 돌아가는 시간 (초) */
-export const AUTO_HOME_SEC = 5;
+export const AUTO_HOME_SEC = 10;
 
 /* cart / end: ▲▼ 한 번에 스크롤되는 양 (px, --u 곱은 추후 필요 시) */
 export const LIST_SCROLL_STEP = 230;
