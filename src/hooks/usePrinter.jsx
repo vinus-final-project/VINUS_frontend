@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { UsbPrinter } from "@atomsolution/usb-printer-capacitor";
+import { buildReceiptImageBase64 } from "../utils/receiptImage";
 
 /* ──────────────────────────────────────────────────────────────
  * usePrinter — USB(OTG) 영수증 프린터 hook (플랫폼 하이브리드)
@@ -58,13 +59,19 @@ const usePrinter = () => {
                 return false;
             }
 
-            // 출력
+            // 출력 — 한글 인코딩 문제 우회를 위해 Canvas 이미지로 인쇄.
+            //   플러그인 printText 는 UTF-8 → code page 변환을 안 해 한글이 인쇄 안 됨.
+            //   Canvas 로 그린 PNG 를 printBase64 로 넘기면 도트 이미지로 그대로 인쇄됨.
             let printed = false;
             try {
-                await UsbPrinter.printText({ text });
+                const base64 = buildReceiptImageBase64(text);
+                if (!base64) {
+                    throw new Error("영수증 이미지 생성 실패");
+                }
+                await UsbPrinter.printBase64({ data: base64 });
                 printed = true;
             } catch (e) {
-                console.error("[printer] printText 실패:", e);
+                console.error("[printer] printBase64 실패:", e);
                 setError(e?.message || "영수증 출력에 실패했습니다.");
             }
 
