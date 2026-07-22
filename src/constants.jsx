@@ -12,6 +12,9 @@ export const RECEIPT_AUTO_END_MS = 3000;
 /* start: 스플래시에서 메인 진입까지 누르고 있어야 하는 시간 (ms) */
 export const START_HOLD_MS = 2000;
 
+/* receipt: 화면 아무 곳이나 눌러 영수증 인쇄를 트리거하는 시간 (ms) */
+export const RECEIPT_HOLD_MS = 3000;
+
 /* end: 결제 완료 후 자동으로 처음으로 돌아가는 시간 (초) */
 export const AUTO_HOME_SEC = 5;
 
