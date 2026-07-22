@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    USB 장치 자동 권한 부여 필터.
+
+    이 파일에 나열된 USB 장치가 폰에 꽂히면 안드로이드가 우리 앱에
+    자동으로 권한을 부여한다(런타임 dialog 없이).
+    Manifest 의 android.hardware.usb.action.USB_DEVICE_ATTACHED
+    intent-filter + meta-data 와 세트로 동작.
+
+    ▸ 진단 단계: <usb-device /> 하나로 "모든 USB 장치" 매칭.
+      permission dialog 처리에서 오는 native crash 를 우회하는지 확인.
+    ▸ 이후 CPP-3000 의 VID/PID 확인되면 아래처럼 좁혀서 사용:
+        <usb-device vendor-id="1234" product-id="5678" />
+      (Vendor/Product ID 는 10진수. USB Device Info 앱 등으로 확인)
+-->
+<resources>
+    <usb-device />
+</resources>

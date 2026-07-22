@@ -32,6 +32,16 @@
                 <data android:scheme="voiceinus" />
             </intent-filter>
 
+            <!-- USB 프린터 자동 권한 부여 (res/xml/device_filter.xml 참조).
+                 프린터가 꽂히는 순간 앱에 권한이 부여되어 UsbPrinter.connect()
+                 의 permission dialog 처리 단계에서 나는 native crash 를 우회. -->
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+
         </activity>
 
         <provider
