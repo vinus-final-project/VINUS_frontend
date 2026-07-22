@@ -1,15 +1,17 @@
 import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
 import { RECEIPT_AUTO_END_MS, STORE_NAME } from "../../../constants";
 import { formatKRW } from "../../../utils/format";
 import useCart from "../../../hooks/useCart";
+import useTts from "../../../hooks/useTts";
+import { ttsStartedMic, ttsEndedMic } from "../../../utils/micGate";
 import "./ReceiptModal.css";
 
 /* 영수증 받기 모달 — 주문번호 + 주문내역 영수증 표
  *
  * 동작:
- *   - 띄워진 뒤 RECEIPT_AUTO_END_MS 후 자동으로 /end 로 이동
+ *   - 띄워진 뒤 RECEIPT_AUTO_END_MS 후 자동으로 onClose 콜백 호출
+ *     (호출자가 후속 흐름 결정 — 예: 다음 UI 표시, /end 이동 등)
  *   - 사용자 클릭으로 닫는 기능은 없음 (헷갈림 방지)
  *
  * 주문내역: pay 단계에서 placeOrder() 로 스냅샷된 lastOrder (SS 백업 —
@@ -19,10 +21,11 @@ import "./ReceiptModal.css";
  *
  * props
  *   - orderNumber: 주문번호 (결제 confirm 응답 od_no)
+ *   - onClose:     자동 닫힘 시 호출 (RECEIPT_AUTO_END_MS 경과 후)
  */
-export default function ReceiptModal({ orderNumber = 271 }) {
-  const navigate = useNavigate();
+export default function ReceiptModal({ orderNumber = 271, onClose }) {
   const { lastOrder } = useCart();
+  const { speak } = useTts();
 
   // lastOrder → 영수증 행 (메뉴/옵션/수량/금액) + 합계
   const { rows, total } = useMemo(() => {
@@ -42,11 +45,20 @@ export default function ReceiptModal({ orderNumber = 271 }) {
     return { rows, total };
   }, [lastOrder]);
 
-  // RECEIPT_AUTO_END_MS 후 자동으로 결제내역(end) 페이지로
+  // 모달 mount 즉시 대기번호 음성 안내
   useEffect(() => {
-    const id = setTimeout(() => navigate("/end"), RECEIPT_AUTO_END_MS);
+    speak(`대기번호는 ${orderNumber}번 입니다.`, {
+      onStart: ttsStartedMic,
+      onEnd: ttsEndedMic,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderNumber]);
+
+  // RECEIPT_AUTO_END_MS 후 자동으로 onClose 콜백 호출
+  useEffect(() => {
+    const id = setTimeout(() => onClose?.(), RECEIPT_AUTO_END_MS);
     return () => clearTimeout(id);
-  }, [navigate]);
+  }, [onClose]);
 
   return createPortal(
     <div className="receipt-modal" role="dialog" aria-modal="true">

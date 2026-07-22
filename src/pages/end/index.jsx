@@ -5,6 +5,8 @@ import { formatKRW, formatCount } from "../../utils/format";
 import useCart from "../../hooks/useCart";
 import useMenu, { getMenuUnit } from "../../hooks/useMenu";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
+import useTts from "../../hooks/useTts";
+import { ttsStartedMic, ttsEndedMic } from "../../utils/micGate";
 import "./end.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -21,6 +23,7 @@ export default function End() {
   const { lastOrder } = useCart();
   const cleanup = useSessionCleanup();
   const { getAllMenus } = useMenu();
+  const { speak } = useTts();
 
   /*  수량 단위(잔/개) 판정용 부트스트랩 캐시 웜업.
    *  Toss 리다이렉트 full reload 후엔 order 페이지를 안 거쳐 캐시가
@@ -69,6 +72,24 @@ export default function End() {
 
   /*  한 번만 실행되도록 flag — seconds===0 재렌더 사이 재호출 방지.        */
   const finishedRef = useRef(false);
+
+  /*  주문 내역 음성 안내 — mount 시 1회 재생.
+   *  단위(잔/개) 는 unitReady 후 정확해지므로 displayItems 준비 후 실행.
+   *  안내 문구:  "주문 내역을 알려드립니다. 아메리카노 1잔, 카페라떼 2잔.
+   *              합계 5000원 입니다."                                       */
+  const spokenRef = useRef(false);
+  useEffect(() => {
+    if (spokenRef.current) return;
+    if (displayItems.length === 0) return;
+    spokenRef.current = true;
+    const summary = displayItems
+        .map((it) => `${it.name} ${it.count}${it.unit || "개"}`)
+        .join(", ");
+    const total = displayItems.reduce((s, it) => s + (it.price || 0), 0);
+    const text = `주문 내역을 알려드립니다. ${summary}. 합계 ${total.toLocaleString()}원 입니다.`;
+    speak(text, { onStart: ttsStartedMic, onEnd: ttsEndedMic });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayItems]);
 
   /*  세션 완전 정리(정상 종료) + 홈 이동을 한 번만 수행.
    *  cleanup("expire") 는 backend DELETE + reset + clearLastOrder 통합.

@@ -11,6 +11,8 @@ import { peekOrderNumber } from "../../utils/orderNumber";
 import buildReceiptText from "../../utils/receiptText";
 import useCart from "../../hooks/useCart";
 import usePrinter from "../../hooks/usePrinter";
+import useTts from "../../hooks/useTts";
+import { ttsStartedMic, ttsEndedMic } from "../../utils/micGate";
 import receiptPng from "../../assets/receipt.png";
 import "./receipt.css";
 
@@ -34,6 +36,7 @@ export default function Receipt() {
   const navigate = useNavigate();
   const { lastOrder } = useCart();
   const { printReceipt } = usePrinter();
+  const { speak } = useTts();
 
   /* 주문번호 — pay 페이지가 결제 확정 시 issueOrderNumber() 로 발급한
    * 당일 번호를 조회. 발급 이력이 없으면(개발/직접 진입) 임시 상수 fallback */
@@ -115,9 +118,14 @@ export default function Receipt() {
 
   /* ── intro 모달 자동 닫힘 콜백 ────────────────────────────
    *   모달 닫힘 → 선택 UI 노출 + 자동 스킵 타이머 시작.
-   *   (자동 스킵은 사용자가 UI 를 볼 수 있는 시점부터 카운트) */
+   *   (자동 스킵은 사용자가 UI 를 볼 수 있는 시점부터 카운트)
+   *   동시에 선택 방법 음성 안내.                                     */
   const handleIntroClose = () => {
     setIntroModalOpen(false);
+    speak(
+      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 10초간 기다려주세요.",
+      { onStart: ttsStartedMic, onEnd: ttsEndedMic }
+    );
     autoSkipTimerRef.current = setTimeout(() => {
       autoSkipTimerRef.current = null;
       handleNoReceipt();
