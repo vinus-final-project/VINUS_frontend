@@ -48,6 +48,10 @@ const formatWon = (n) => `${(n ?? 0).toLocaleString()}원`;
 /* 주문번호 3자리 패딩 (1 → "001") */
 export const formatOrderNo = (n) => String(n ?? 0).padStart(3, "0");
 
+/* receiptImage.js 가 파싱하는 마크업:
+ *   접두사 "##" — 그 줄은 큰 폰트 + 중앙 정렬로 렌더 (주문번호 등 강조용)     */
+const H_PREFIX = "##";
+
 export const buildReceiptText = ({
     storeName = STORE_NAME,
     orderNumber, // 숫자(3자리 패딩) 또는 주문 코드 문자열("A-0714-001") 모두 허용
@@ -61,29 +65,49 @@ export const buildReceiptText = ({
         `${String(dt.getDate()).padStart(2, "0")} ` +
         `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
 
-    const out = [];
-    out.push(hr("="));
-    out.push(lineCenter(storeName || "가맹점명"));
-    out.push(hr("="));
-    out.push(
-        `주문번호: ${typeof orderNumber === "string" ? orderNumber : formatOrderNo(orderNumber)}`
-    );
-    out.push(stamp);
-    out.push(hr());
+    const orderNoStr =
+        typeof orderNumber === "string" ? orderNumber : formatOrderNo(orderNumber);
 
+    const out = [];
+
+    // ── 상단: 주문번호 강조 블럭 ─────────────────────────────
+    out.push(hr("="));
+    out.push("주문번호");
+    out.push(H_PREFIX + orderNoStr);   // 큰 폰트 + 중앙정렬
+    out.push(hr("="));
+
+    // ── 매장/시각 ────────────────────────────────────────────
+    out.push(storeName || "가맹점명");
+    out.push(stamp);
+    out.push(hr("-"));
+
+    // ── 메뉴 항목 ────────────────────────────────────────────
     for (const it of items) {
         const qty = it.o_m_qty ?? 1;
         const price = (it.unitPrice ?? 0) * qty;
         out.push(lineLR(`${it.m_name} x${qty}`, formatWon(price)));
         for (const op of it.options ?? []) {
-            out.push(`  - ${op.op_name}${op.qty > 1 ? ` ${op.qty}개` : ""}`);
+            const opQty = op.qty ?? 1;
+            const opPrice = (op.op_price ?? 0) * opQty;
+            const label =
+                opQty > 1 ? ` - ${op.op_name} x${opQty}` : ` - ${op.op_name}`;
+            if (opPrice > 0) {
+                out.push(lineLR(label, `+ ${formatWon(opPrice)}`));
+            } else {
+                out.push(label);
+            }
         }
     }
 
-    out.push(hr());
+    out.push(hr("-"));
+
+    // ── 합계 ─────────────────────────────────────────────────
     out.push(lineLR("합계", formatWon(totalPrice)));
     out.push(hr("="));
+
+    // ── 감사 인사 ────────────────────────────────────────────
     out.push(lineCenter("이용해 주셔서 감사합니다"));
+
     out.push("\n\n\n"); // 커터 여백 (feed)
 
     return out.join("\n");

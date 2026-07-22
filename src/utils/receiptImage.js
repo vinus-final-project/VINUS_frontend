@@ -24,6 +24,13 @@ const DEFAULT_LINE_HEIGHT = 62; // 줄 간격 (이전 78 의 0.8배)
 const DEFAULT_FONT_FAMILY =
     "'D2Coding','NanumGothicCoding','Menlo','Consolas','Courier New',monospace";
 
+/* 마크업
+ *   접두사 "##" 인 줄은 큰 폰트 + 중앙 정렬 (강조용 — 주문번호 등).
+ *     예: "##008" → 60px bold, 중앙                                          */
+const HEADING_PREFIX = "##";
+const HEADING_FONT_SIZE = 84;   // 강조 폰트 크기
+const HEADING_LINE_HEIGHT = 100;
+
 /*  텍스트 문자열을 Canvas 에 렌더해 base64 PNG(data URL 프리픽스 없음) 반환.
  *  실패 시 null.                                                                 */
 export function buildReceiptImageBase64(text, opts = {}) {
@@ -39,10 +46,34 @@ export function buildReceiptImageBase64(text, opts = {}) {
     try {
         // 텍스트 안 ESC/POS 제어문자(\x1B~ 등) 제거 — 이미지 렌더 시 무의미
         const cleaned = text.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, "");
-        const lines = cleaned.split("\n");
+        const rawLines = cleaned.split("\n");
 
-        const height =
-            paddingTop + paddingBottom + Math.max(1, lines.length) * lineHeight;
+        // 라인 별 렌더 정보 사전 계산 (헤딩 여부에 따라 폰트/줄높이 다름)
+        const rendered = rawLines.map((line) => {
+            if (line.startsWith(HEADING_PREFIX)) {
+                return {
+                    text: line.slice(HEADING_PREFIX.length),
+                    isHeading: true,
+                    fontSize: HEADING_FONT_SIZE,
+                    lineHeight: HEADING_LINE_HEIGHT,
+                };
+            }
+            return {
+                text: line,
+                isHeading: false,
+                fontSize,
+                lineHeight,
+            };
+        });
+
+        // 각 라인의 top 오프셋 누적 계산
+        let cursorY = paddingTop;
+        const positions = rendered.map((r) => {
+            const y = cursorY;
+            cursorY += r.lineHeight;
+            return y;
+        });
+        const height = cursorY + paddingBottom;
 
         const canvas = document.createElement("canvas");
         canvas.width = width;
@@ -54,15 +85,19 @@ export function buildReceiptImageBase64(text, opts = {}) {
         // 흰 배경
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, width, height);
-
-        // 검은 텍스트
         ctx.fillStyle = "#000000";
-        ctx.font = `${fontSize}px ${fontFamily}`;
         ctx.textBaseline = "top";
-        ctx.textAlign = "left";
 
-        lines.forEach((line, i) => {
-            ctx.fillText(line, paddingLeft, paddingTop + i * lineHeight);
+        rendered.forEach((r, i) => {
+            if (r.isHeading) {
+                ctx.font = `bold ${r.fontSize}px ${fontFamily}`;
+                ctx.textAlign = "center";
+                ctx.fillText(r.text, width / 2, positions[i]);
+            } else {
+                ctx.font = `${r.fontSize}px ${fontFamily}`;
+                ctx.textAlign = "left";
+                ctx.fillText(r.text, paddingLeft, positions[i]);
+            }
         });
 
         // data URL → base64 payload 만 잘라 반환
