@@ -16,28 +16,9 @@ import { STORE_NAME } from "../constants"
 
 const COLS = 42; // 80mm 표준 프린터 기준 (58mm 소형은 32)
 
-/* CPP-3000 초기화 프리픽스.
- *   스펙: Font A 42자 / 인쇄폭 72mm / 기본 Font A / print offset 0.
- *   → Font A 42칸이 정확히 72mm 에 맞으므로 폰트 축소는 필요 없다.
- *   대신 이전 인쇄에서 남아 있을 수 있는 상태(Font B, 좌측 여백,
- *   double-width 속성 등) 를 매번 초기화해서 안정적으로 Font A 42칸을
- *   보장한다.
- *
- *   ESC/POS 명령:
- *     \x1B\x40         ESC @   프린터 초기화 (Font A, 정렬 초기값 등)
- *     \x1B\x4D\x00     ESC M 0 Font A 명시적 선택
- *     \x1B\x21\x00     ESC ! 0 문자 크기 속성 초기화 (double-width 등 해제)
- *     \x1B\x61\x00     ESC a 0 좌측 정렬
- *     \x1D\x4C\x00\x00 GS L 0  좌측 여백 0 도트
- *
- *   ⚠ raw ESC 통과 여부는 프린터 플러그인(DantSu) 처리에 달림.
- *     안 통하면 이 상수를 주석 처리하고 대신 DantSu 마크업으로 전환.     */
-const INIT_CMDS =
-    "\x1B\x40" +
-    "\x1B\x4D\x00" +
-    "\x1B\x21\x00" +
-    "\x1B\x61\x00" +
-    "\x1D\x4C\x00\x00";
+/* 인쇄는 usePrinter 가 Canvas → PNG(printBase64) 방식으로 처리한다.
+ * 이미지 인쇄는 ESC/POS 프리픽스가 무의미(오히려 이미지 상단에 잔재
+ * 문자가 남음)하므로 INIT_CMDS 를 사용하지 않는다.                        */
 
 /* 표시폭 계산 — 한글/전각 2칸, 그 외 1칸 */
 const displayWidth = (s) =>
@@ -101,8 +82,7 @@ export const buildReceiptText = ({
     out.push(lineCenter("이용해 주셔서 감사합니다"));
     out.push("\n\n\n"); // 커터 여백 (feed)
 
-    // 폰트 축소 프리픽스 (INIT_CMDS) 를 붙여 42칸이 인쇄 폭에 들어가도록.
-    return INIT_CMDS + out.join("\n");
+    return out.join("\n");
 };
 
 export default buildReceiptText;

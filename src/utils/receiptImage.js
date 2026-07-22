@@ -19,8 +19,8 @@
  * ────────────────────────────────────────────────────────────── */
 
 const DEFAULT_WIDTH = 576;      // CPP-3000 인쇄 폭 (도트)
-const DEFAULT_FONT_SIZE = 20;   // 세로 크기
-const DEFAULT_LINE_HEIGHT = 26; // 줄 간격
+const DEFAULT_FONT_SIZE = 30;   // 세로 크기 (1.5배 확대)
+const DEFAULT_LINE_HEIGHT = 78; // 줄 간격 (원본 26 대비 3배)
 const DEFAULT_FONT_FAMILY =
     "'D2Coding','NanumGothicCoding','Menlo','Consolas','Courier New',monospace";
 
