@@ -14,7 +14,11 @@
 
 import { STORE_NAME } from "../constants"
 
-const COLS = 42; // 80mm 표준 프린터 기준 (58mm 소형은 32)
+/* COLS — 한 줄에 담을 문자 수.
+ *   receiptImage.js 의 fontSize(30) 기준 monospace 한 글자 폭 ≈ 18도트.
+ *   인쇄 폭 576도트에 30글자 담으면 30×18 = 540 (여유 36). 우측 넘치지 않음.
+ *   fontSize 를 조정하면 COLS 도 같이 재계산해야 함.                       */
+const COLS = 30;
 
 /* 인쇄는 usePrinter 가 Canvas → PNG(printBase64) 방식으로 처리한다.
  * 이미지 인쇄는 ESC/POS 프리픽스가 무의미(오히려 이미지 상단에 잔재
