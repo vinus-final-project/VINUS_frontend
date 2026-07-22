@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AUTO_HOME_SEC, LIST_SCROLL_STEP, ORDER_NUMBER } from "../../constants";
+import { AUTO_HOME_MS, LIST_SCROLL_STEP, ORDER_NUMBER } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import { peekOrderNumber } from "../../utils/orderNumber";
 import useCart from "../../hooks/useCart";
@@ -70,7 +70,8 @@ export default function End() {
   }, [lastOrder, unitReady]);
 
   const listRef = useRef(null); // 메뉴 리스트 내부 스크롤 영역
-  const [seconds, setSeconds] = useState(AUTO_HOME_SEC);
+  // 표시용 초 단위 카운트 — 상수는 ms 로 통일되어 있어 여기서 초로 변환.
+  const [seconds, setSeconds] = useState(Math.round(AUTO_HOME_MS / 1000));
 
   /*  hook 함수를 최신 참조로 유지 (deps 재실행/무한 호출 방지 — #109) */
   const cleanupRef = useRef(cleanup);
