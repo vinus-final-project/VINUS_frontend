@@ -1,5 +1,6 @@
 import { MdOutlineHome, MdOutlineNotifications, MdOutlineAccessTime } from "react-icons/md";
 import vinusTextLight from "../../assets/VINUS_text_light.png";
+import { showInfoAlert } from "../../utils/alertUtils";
 import "./navbar.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -23,12 +24,12 @@ export default function Navbar({
 }) {
   const handleHome = () => {
     if (onHome) return onHome();
-    alert("처음으로");
+    showInfoAlert({ title: "처음으로", text: "홈으로 이동합니다." });
   };
 
   const handleCallStaff = () => {
     if (onCallStaff) return onCallStaff();
-    alert("직원호출");
+    showInfoAlert({ title: "직원호출", text: "직원이 도와드리러 갑니다." });
   };
 
   return (

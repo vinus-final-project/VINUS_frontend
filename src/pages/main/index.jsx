@@ -4,6 +4,7 @@ import Navbar from "../../components/navbar";
 import { STORE_NAME } from "../../constants";
 import useSession from "../../hooks/useSession";
 import useWebSocket from "../../hooks/useWebSocket";
+import { showInfoAlert } from "../../utils/alertUtils";
 import "./main.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ export default function Main() {
   }, []);
 
   const handleCallStaff = () => {
-    alert("직원호출");
+    showInfoAlert({ title: "직원호출", text: "직원이 도와드리러 갑니다." });
     // TODO: 직원호출 API 요청
   };
 

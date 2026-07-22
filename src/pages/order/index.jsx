@@ -11,6 +11,7 @@ import useSession from "../../hooks/useSession";
 import useSessionApi from "../../hooks/useSessionApi";
 import useOrder from "../../hooks/useOrder";
 import useWebSocket from "../../hooks/useWebSocket";
+import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 import "./order.css";
 
 /* 한 화면 메뉴 개수 — 2열 × 3행 (좌측 1열은 카테고리).
@@ -183,7 +184,7 @@ export default function Order() {
   };
 
   const handleCallStaff = () => {
-    alert("직원호출");
+    showInfoAlert({ title: "직원호출", text: "직원이 도와드리러 갑니다." });
     // TODO: 직원호출 API 요청
   };
 
@@ -202,7 +203,10 @@ export default function Order() {
   const handleMenu = async (menu) => {
     if (menuBusy) return;
     if (!session_id) {
-      alert("세션이 만료되었습니다. 처음부터 다시 시도해주세요.");
+      showWarningAlert({
+        title: "세션 만료",
+        text: "세션이 만료되었습니다. 처음부터 다시 시도해주세요.",
+      });
       navigate("/");
       return;
     }

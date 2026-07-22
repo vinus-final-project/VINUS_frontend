@@ -7,6 +7,7 @@ import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePayment from "../../hooks/usePayment";
+import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 import "./cart.css";
 
 export default function Cart() {
@@ -31,7 +32,7 @@ export default function Cart() {
     navigate("/"); // 처음(홈) 화면으로 이동
   };
   const handleCallStaff = () => {
-    alert("직원호출");
+    showInfoAlert({ title: "직원호출", text: "직원이 도와드리러 갑니다." });
     // TODO: 직원호출 API 요청
   };
 
@@ -51,7 +52,10 @@ export default function Cart() {
     if (busy) return;
     if (items.length === 0) return;
     if (!session_id) {
-      alert("세션이 만료되었습니다. 처음부터 다시 시도해주세요.");
+      showWarningAlert({
+        title: "세션 만료",
+        text: "세션이 만료되었습니다. 처음부터 다시 시도해주세요.",
+      });
       navigate("/");
       return;
     }
@@ -59,7 +63,10 @@ export default function Cart() {
     try {
       const res = await startPayment(session_id);
       if (!res) {
-        alert("결제 시작에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        showWarningAlert({
+          title: "결제 시작 실패",
+          text: "결제 시작에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        });
         return;
       }
       applySessionResponse(res);

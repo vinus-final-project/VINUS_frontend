@@ -6,6 +6,7 @@ import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useMenu from "../../hooks/useMenu";
 import useSession from "../../hooks/useSession";
 import useOrder from "../../hooks/useOrder";
+import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 import "./orderDetail.css";
 
 /* ──────────────────────────────────────────────────────────────
@@ -181,7 +182,8 @@ export default function OrderDetail() {
 
   /* ── 핸들러 ──────────────────────────────────────────── */
   const handleHome = () => navigate("/");
-  const handleCallStaff = () => alert("직원호출");
+  const handleCallStaff = () =>
+    showInfoAlert({ title: "직원호출", text: "직원이 도와드리러 갑니다." });
 
   /* selectOption(+1) / deselectOption(-1) backend 호출 도우미
    *   응답이 오면 applySessionResponse 로 상태 반영.               */
@@ -313,13 +315,19 @@ export default function OrderDetail() {
           0
         );
         if (total < min) {
-          alert(`'${og.og_name}' 을(를) 최소 ${min}개 선택해주세요.`);
+          showWarningAlert({
+            title: "옵션 선택 필요",
+            text: `'${og.og_name}' 을(를) 최소 ${min}개 선택해주세요.`,
+          });
           return;
         }
       } else {
         const cur = selectedButtons[og.og_id] || [];
         if (cur.length < min) {
-          alert(`'${og.og_name}' 을(를) 선택해주세요.`);
+          showWarningAlert({
+            title: "옵션 선택 필요",
+            text: `'${og.og_name}' 을(를) 선택해주세요.`,
+          });
           return;
         }
       }
@@ -329,7 +337,10 @@ export default function OrderDetail() {
      *   응답 SessionResponse.cart 로 로컬 items 가 자동 반영됨(useCart 는
      *   session.cart 파생). response_type === "ERROR" 이면 alert 후 return. */
     if (!session_id) {
-      alert("세션이 만료되었습니다. 처음부터 다시 시도해주세요.");
+      showWarningAlert({
+        title: "세션 만료",
+        text: "세션이 만료되었습니다. 처음부터 다시 시도해주세요.",
+      });
       navigate("/");
       return;
     }
@@ -342,12 +353,15 @@ export default function OrderDetail() {
       setBusy(false);
     }
     if (!res) {
-      alert("장바구니 담기에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      showWarningAlert({
+        title: "담기 실패",
+        text: "장바구니 담기에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      });
       return;
     }
     if (res.response_type === "ERROR") {
       const msg = res.message || res.error_code || "장바구니에 담을 수 없습니다.";
-      alert(msg);
+      showWarningAlert({ title: "담기 실패", text: msg });
       applySessionResponse(res);
       return;
     }

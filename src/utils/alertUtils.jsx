@@ -1,13 +1,6 @@
 import Swal from "sweetalert2";
 import { buildFileUrl } from "./api";
 
-const sharedCustomClass = {
-    title: "!text-lg font-bold pt-6",
-    popup: "rounded-3xl",
-    confirmButton: "px-6 py-3 rounded-2xl",
-    cancelButton: "px-6 py-3 rounded-2xl text-[#3D4D5C]",
-};
-
 export async function showWarningDialog({
                                             title,
                                             text,
@@ -26,7 +19,6 @@ export async function showWarningDialog({
         confirmButtonColor: "#E89B9B",
         cancelButtonColor: "#EEF2F5",
         reverseButtons: true,
-        customClass: sharedCustomClass,
     });
     return result.isConfirmed;
 }
@@ -39,7 +31,6 @@ export function showSuccessAlert({ title, text } = {}) {
         width: '330px',
         icon: "success",
         confirmButtonColor: "#A8C8D8",
-        customClass: sharedCustomClass,
     });
 }
 
@@ -51,7 +42,6 @@ export function showInfoAlert({ title, text } = {}) {
         width: '330px',
         icon: "info",
         confirmButtonColor: "#A8C8D8",
-        customClass: sharedCustomClass,
     });
 }
 
@@ -64,7 +54,6 @@ export function showWarningAlert({ title, text } = {}) {
         icon: "warning",
         iconColor: "#E89B9B",
         confirmButtonColor: "#A8C8D8",
-        customClass: sharedCustomClass,
     });
 }
 /** 보상 팝업 */
@@ -117,6 +106,5 @@ export function showDeadlineAlert({ hoursLeft, mode } = {}) {
         iconColor,
         confirmButtonColor: "#A8C8D8",
         confirmButtonText: "알겠어",
-        customClass: sharedCustomClass,
     });
 }

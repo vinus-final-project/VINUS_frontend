@@ -1,4 +1,5 @@
 import axios from "axios";
+import Swal from "sweetalert2";
 
 /* .env 미로딩(예: vite dev 재시작 누락) 시에도 상대경로로 넘어가지 않도록
  * localhost:8000 을 명시적 fallback 으로 둔다. */
@@ -21,11 +22,20 @@ api.interceptors.response.use(
     (res) => res,
     (err) => {
         try {
-            alert(
-                `[API 실패]\nurl: ${err.config?.baseURL}${err.config?.url}\n` +
-                `code: ${err.code}\nmessage: ${err.message}\n` +
-                `status: ${err.response?.status ?? "(no response)"}`
-            );
+            // 순환 import 방지: alertUtils(→api) 대신 Swal 직접 사용
+            Swal.fire({
+                title: "[API 실패]",
+                html:
+                    `<div style="text-align:left; font-family:monospace; font-size:12px;">` +
+                    `url: ${err.config?.baseURL ?? ""}${err.config?.url ?? ""}<br/>` +
+                    `code: ${err.code ?? ""}<br/>` +
+                    `message: ${err.message ?? ""}<br/>` +
+                    `status: ${err.response?.status ?? "(no response)"}` +
+                    `</div>`,
+                icon: "error",
+                confirmButtonColor: "#A8C8D8",
+                width: "330px",
+            });
         } catch { /* ignore */ }
         return Promise.reject(err);
     }

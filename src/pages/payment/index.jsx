@@ -5,6 +5,7 @@ import useCart from "../../hooks/useCart";
 import "./payment.css";
 import usePayment from "../../hooks/usePayment.jsx";
 import useSession from "../../hooks/useSession.jsx";
+import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 
 /* ──────────────────────────────────────────────────────────────
  * Payment — 결제 방법 선택
@@ -23,7 +24,7 @@ export default function Payment() {
 
   const handleHome = () => navigate("/");
   const handleCallStaff = () => {
-    alert("직원호출");
+    showInfoAlert({ title: "직원호출", text: "직원이 도와드리러 갑니다." });
     // TODO: 직원호출 API 요청
   };
   const handleCancel = async () => {
@@ -36,7 +37,10 @@ export default function Payment() {
 
   const handleSelectCard = () => {
     if (!totalPrice || totalPrice <= 0) {
-      alert("결제할 금액이 없습니다.");
+      showWarningAlert({
+        title: "결제 금액 확인",
+        text: "결제할 금액이 없습니다.",
+      });
       return;
     }
     navigate("/pay");

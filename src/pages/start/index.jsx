@@ -100,7 +100,6 @@ export default function Start() {
 
   /* 짧게 클릭은 무시 (3초 hold 만 유효) */
   const handleScreenClick = () => {
-    // TODO: 실제 동작 (예: 음성 안내 시작) 연결
   };
 
   return (
