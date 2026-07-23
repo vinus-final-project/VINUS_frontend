@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import useSession, { takeStaleSessionId } from "./useSession";
-import useSessionApi from "./useSessionApi";
+import useSessionApi from "../api/useSessionApi";
 import useWebSocket from "./useWebSocket";
 import useCart from "./useCart";
 

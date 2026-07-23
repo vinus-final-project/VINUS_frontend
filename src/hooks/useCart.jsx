@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import useSession from "./useSession";
-import useCartApi from "./useCartApi";
+import useCartApi from "../api/useCartApi";
 
 /* ──────────────────────────────────────────────────────────────
  * useCart — 장바구니 selector + 마지막 주문 스냅샷
