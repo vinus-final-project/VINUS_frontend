@@ -33,10 +33,6 @@ import { TextToSpeech } from "@capacitor-community/text-to-speech";
 /* ── 웹: 한국어 보이스 선택 (모듈 스코프 1회 준비) ──────────
  * getVoices() 는 브라우저에 따라 비동기 로드라 처음엔 빈 배열일 수
  * 있다 → voiceschanged 이벤트에서 재선택.                          */
-const TTS_PRONUNCIATION = { ICE: "아이스", HOT: "핫" };
-const fixPronunciation = (text) =>
-    text.replace(/\b(ICE|HOT)\b/g, (m) => TTS_PRONUNCIATION[m] ?? m);
-
 let koVoice = null;
 const pickKoVoice = () => {
     const voices = window.speechSynthesis?.getVoices?.() ?? [];
@@ -152,14 +148,13 @@ const useTts = () => {
     // ── 공용 진입점 ──────────────────────────────────────────
     const speak = useCallback((text, { onStart, onEnd } = {}) => {
         if (!text || !text.trim()) return false;
-        const spoken = fixPronunciation(text.trim());   // ← 발음 교정
         const gen = ++genRef.current;
 
         try {
             if (Capacitor.isNativePlatform()) {
-                speakNative(spoken, gen, onStart, onEnd); // fire-and-forget
+                speakNative(text.trim(), gen, onStart, onEnd); // fire-and-forget
             } else {
-                speakWeb(spoken, gen, onStart, onEnd);
+                speakWeb(text.trim(), gen, onStart, onEnd);
             }
             return true;
         } catch (err) {

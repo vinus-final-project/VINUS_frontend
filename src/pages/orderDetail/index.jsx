@@ -3,9 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import Navbar from "../../components/navbar";
 import { formatKRW } from "../../utils/format";
 import useSessionCountdown from "../../hooks/useSessionCountdown";
-import useMenu from "../../hooks/useMenu";
+import useMenu from "../../api/useMenu";
 import useSession from "../../hooks/useSession";
-import useOrder from "../../hooks/useOrder";
+import useOrder from "../../api/useOrder";
 import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 import "./orderDetail.css";
 

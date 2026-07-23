@@ -4,7 +4,7 @@ import { AUTO_HOME_MS, LIST_SCROLL_STEP, ORDER_NUMBER } from "../../constants";
 import { formatKRW, formatCount } from "../../utils/format";
 import { peekOrderNumber } from "../../utils/orderNumber";
 import useCart from "../../hooks/useCart";
-import useMenu, { getMenuUnit } from "../../hooks/useMenu";
+import useMenu, { getMenuUnit } from "../../api/useMenu";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
 import useTts from "../../hooks/useTts";
 import { ttsStartedMic, ttsEndedMic } from "../../utils/micGate";

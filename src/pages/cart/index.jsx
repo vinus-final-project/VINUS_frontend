@@ -6,7 +6,7 @@ import { formatKRW, formatCount } from "../../utils/format";
 import useSessionCountdown from "../../hooks/useSessionCountdown";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
-import usePayment from "../../hooks/usePayment";
+import usePayment from "../../api/usePayment";
 import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 import "./cart.css";
 

@@ -3,7 +3,7 @@ import Navbar from "../../components/navbar";
 import { formatKRW } from "../../utils/format";
 import useCart from "../../hooks/useCart";
 import "./payment.css";
-import usePayment from "../../hooks/usePayment.jsx";
+import usePayment from "../../api/usePayment";
 import useSession from "../../hooks/useSession.jsx";
 import { showInfoAlert, showWarningAlert } from "../../utils/alertUtils";
 

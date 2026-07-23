@@ -4,7 +4,7 @@ import { ANONYMOUS } from "@tosspayments/tosspayments-sdk";
 import { Capacitor } from "@capacitor/core";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
-import usePayment from "../../hooks/usePayment";
+import usePayment from "../../api/usePayment";
 import { getTossPayments } from "../../utils/toss";
 import { issueOrderNumber } from "../../utils/orderNumber";
 import { lockForPaymentMic, unlockForPaymentMic } from "../../utils/micGate";
