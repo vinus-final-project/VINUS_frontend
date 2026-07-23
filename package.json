@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
-    "cap:android": "npm run build && npx cap sync android && npx cap open android"
+    "cap:android": "npm run build && npx cap sync android && npx cap open android",
+    "cap:icons": "npx @capacitor/assets generate --iconOnlyPath src/assets/VINUS_app.png --android"
   },
   "dependencies": {
     "@atomsolution/usb-printer-capacitor": "1.5.0",
@@ -22,7 +23,6 @@
     "react-dom": "^19.2.0",
     "react-icons": "^5.6.0",
     "react-router-dom": "^7.6.0",
-    "sweetalert2": "^11.26.25",
     "wanted-sans": "^1.0.3"
   },
   "devDependencies": {
