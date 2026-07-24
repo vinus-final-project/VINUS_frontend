@@ -11,7 +11,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 /**
  * MediaVolume — TTS duck 을 위한 시스템 미디어 볼륨 조절 플러그인.
  *
- * duck()   : 현재 STREAM_MUSIC 볼륨을 저장하고 50% 로 감소
+ * duck()   : 현재 STREAM_MUSIC 볼륨을 저장하고 75% 로 감소
  * unduck() : 저장된 원본 볼륨으로 복원
  *
  * 사용 흐름 (frontend):
@@ -42,7 +42,7 @@ public class MediaVolumePlugin extends Plugin {
             if (savedVolume < 0) {
                 savedVolume = cur;
             }
-            int reduced = Math.max(0, savedVolume / 2);
+            int reduced = Math.max(0, savedVolume * 3 / 4);
             am.setStreamVolume(AudioManager.STREAM_MUSIC, reduced, 0);
             call.resolve();
         } catch (Exception e) {
