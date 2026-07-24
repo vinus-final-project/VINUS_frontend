@@ -3,6 +3,7 @@ package com.vinus.kiosk;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
@@ -27,6 +28,17 @@ import com.getcapacitor.BridgeWebViewClient;
  * successUrl(https://localhost/pay?...) 로 리다이렉트해 결제가 이어진다.
  */
 public class MainActivity extends BridgeActivity {
+
+    /**
+     * 커스텀 Capacitor 플러그인 등록.
+     *   ▸ MediaVolume — TTS duck 을 위한 STREAM_MUSIC 볼륨 조절 (AudioManager)
+     * super.onCreate() 이전에 registerPlugin 필요.
+     */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(MediaVolumePlugin.class);
+        super.onCreate(savedInstanceState);
+    }
 
     @Override
     public void onStart() {

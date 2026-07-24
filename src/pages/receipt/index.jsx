@@ -12,7 +12,6 @@ import buildReceiptText from "../../utils/receiptText";
 import useCart from "../../hooks/useCart";
 import usePrinter from "../../hooks/usePrinter";
 import useTts from "../../hooks/useTts";
-import { ttsStartedMic, ttsEndedMic } from "../../utils/micGate";
 import receiptPng from "../../assets/receipt.png";
 import "./receipt.css";
 
@@ -123,9 +122,9 @@ export default function Receipt() {
    *   동시에 선택 방법 음성 안내.                                     */
   const handleIntroClose = () => {
     setIntroModalOpen(false);
+    // 페이지 안내 — micGate 미부착 (duck 대상 아님, 무조건 끝까지 원래 볼륨)
     speak(
-      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 13초간 기다려주세요.",
-      { onStart: ttsStartedMic, onEnd: ttsEndedMic }
+      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 13초간 기다려주세요."
     );
     autoSkipTimerRef.current = setTimeout(() => {
       autoSkipTimerRef.current = null;

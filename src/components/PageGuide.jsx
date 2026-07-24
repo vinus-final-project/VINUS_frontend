@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import useSession from "../hooks/useSession";
 import useTts from "../hooks/useTts";
 import { resolvePageGuideText } from "../constants";
-import { ttsStartedMic, ttsEndedMic, isPaymentLockedMic } from "../utils/micGate";
+import { isPaymentLockedMic } from "../utils/micGate";
 
 /* ──────────────────────────────────────────────────────────────
  * PageGuide — 페이지 입장 음성 안내 (전역 상주, 렌더 없음)
@@ -24,8 +24,11 @@ import { ttsStartedMic, ttsEndedMic, isPaymentLockedMic } from "../utils/micGate
  *   - 결제 잠금 중 (pay — micGate)
  *   - 백엔드 message 가 이 전이를 담당할 때 (위 규칙)
  *
- * barge-in: TtsPlayer 와 동일하게 onStart/onEnd 를 micGate 에 연동 —
- * 안내 재생 중 사용자 발화 감지 시 즉시 끊긴다.
+ * 정책 (2026-07-24 개편):
+ *   페이지 안내는 사용자 발화가 감지되어도 "무조건 끝까지" 원래 볼륨으로
+ *   재생. micGate 콜백(ttsStartedMic/ttsEndedMic)을 붙이지 않아
+ *   isTtsActiveMic()=false → useMicStream 의 duck 로직이 관여하지 않는다.
+ *   (duck 대상은 오직 TtsPlayer의 SessionResponse.message 안내)
  * ────────────────────────────────────────────────────────────── */
 export default function PageGuide() {
     const { pathname } = useLocation();
@@ -53,7 +56,8 @@ export default function PageGuide() {
         const text = resolvePageGuideText(pathname);
         if (!text) return;
 
-        speak(text, { onStart: ttsStartedMic, onEnd: ttsEndedMic });
+        // micGate 콜백 미부착 — duck 대상 아님 (무조건 끝까지 원래 볼륨)
+        speak(text);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname, responseSeq, message]);
 

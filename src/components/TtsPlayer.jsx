@@ -6,22 +6,27 @@ import {
     ttsStartedMic,
     ttsEndedMic,
     setTtsStopperMic,
+    setTtsDuckerMic,
     isPaymentLockedMic,
 } from "../utils/micGate";
+import { duckMedia, unduckMedia } from "../utils/mediaVolume";
 import { markTtsStart } from "../utils/perfTrace";
 
 /* ──────────────────────────────────────────────────────────────
  * TtsPlayer — SessionResponse.message 자동 음성 안내 (전역 상주)
  *
  * RootLayout 에 배치 (렌더 없음, return null).
- * 합성은 Web Speech API(useTts) — 서버/네트워크 왕복 없이 즉시 재생.
  *
  * 동작:
  *   - responseSeq 가 바뀔 때(= 새 SessionResponse 수신)만 반응
  *   - message 가 있으면 speak() — 재생 중이던 이전 안내는 자동 취소
- *   - barge-in: 재생 동안 micGate 가 barge-in 모드(높은 임계값)로
- *     동작하고, 사용자 발화 감지 시 stop() 으로 TTS 를 즉시 끊는다
+ *   - 재생 중 사용자 발화가 감지되면 duck (시스템 미디어 볼륨 50%),
+ *     발화 종료 시 unduck 로 원복. 재생은 끝까지 유지.
+ *   - 결제 페이지 진입(lockForPaymentMic)에서는 stopper 로 즉시 중단.
  *   - 미지원 브라우저/합성 실패는 조용히 무시 — 안내 음성은 부가 기능
+ *
+ * ※ PageGuide/receipt/end/receiptModal 안내는 여기와 별개다 —
+ *   그쪽은 micGate 콜백을 붙이지 않아 duck 대상이 아니다 (무조건 끝까지).
  * ────────────────────────────────────────────────────────────── */
 export default function TtsPlayer() {
     const { message, responseSeq } = useSession();
@@ -31,12 +36,16 @@ export default function TtsPlayer() {
     // 이미 처리한 응답 seq (SessionRouter 와 동일한 중복 방지 패턴)
     const handledSeqRef = useRef(0);
 
-    /* barge-in: 사용자 발화 감지 시 useMicStream → micGate 가 stop 으로
-     *   TTS 를 즉시 중단시킨다 (mount 시 1회 등록, 언마운트 시 정리)      */
+    /* micGate 배선:
+     *   ▸ setTtsStopperMic(stop) — 결제 잠금 시 즉시 중단용
+     *   ▸ setTtsDuckerMic({duck, unduck}) — 발화 감지 시 볼륨 조절용
+     * mount 시 1회 등록, 언마운트 시 정리 + 진행 중 재생 중단.          */
     useEffect(() => {
         setTtsStopperMic(stop);
+        setTtsDuckerMic({ duck: duckMedia, unduck: unduckMedia });
         return () => {
             setTtsStopperMic(null);
+            setTtsDuckerMic(null);
             stop();
         };
     }, [stop]);
@@ -62,7 +71,8 @@ export default function TtsPlayer() {
         // 결제 잠금 중(pay 페이지 — 토스 결제창 표시)에는 재생하지 않음
         if (isPaymentLockedMic()) return;
 
-        // 재생 동안 barge-in 모드 진입/해제는 utterance 이벤트에 연동
+        // 재생 시작/종료에 micGate TTS-active 상태 동기화
+        //   → useMicStream 이 이 상태를 보고 duck 판정 실행
         //   (onEnd 는 정상 종료·취소·오류 모두에서 1회 보장 — useTts)
         speak(message, {
             onStart: () => {

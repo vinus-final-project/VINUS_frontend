@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { RECEIPT_AUTO_END_MS } from "../../../constants";
 import useTts from "../../../hooks/useTts";
-import { ttsStartedMic, ttsEndedMic } from "../../../utils/micGate";
 import "./ReceiptModal.css";
 
 /* 대기번호 안내 모달 — 주문번호만 크게 표시
@@ -23,11 +22,9 @@ export default function ReceiptModal({ orderNumber = 271, onClose }) {
   const { speak } = useTts();
 
   // 모달 mount 즉시 대기번호 음성 안내
+  //   페이지 안내 — micGate 미부착 (duck 대상 아님, 무조건 끝까지 원래 볼륨)
   useEffect(() => {
-    speak(`대기번호는 ${orderNumber}번 입니다.`, {
-      onStart: ttsStartedMic,
-      onEnd: ttsEndedMic,
-    });
+    speak(`대기번호는 ${orderNumber}번 입니다.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
 
