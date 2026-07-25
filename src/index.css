@@ -18,3 +18,26 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── .hold-target — 길게 누르기(hold) 영역 ─────────────────────
+ * APK(Android WebView) 대응. 웹뷰는 브라우저보다 훨씬 공격적으로 터치
+ * 제스처를 가로채고, 그 순간 pointercancel 을 쏴서 진행 중인 hold 가
+ * 죽는다. 2초 hold 를 방해하는 웹뷰 기본 동작을 전부 끈다:
+ *
+ *   touch-action: none        스크롤/핀치/더블탭줌 제스처 클레임 차단
+ *                             (start·receipt 는 자체 스크롤이 없어 안전)
+ *   user-select: none         길게 누를 때 뜨는 텍스트 선택 UI 차단.
+ *                             ★ 웹뷰에서 hold 가 죽는 가장 흔한 원인 —
+ *                               ~500ms 에 선택 핸들이 뜨며 포인터를 뺏는다
+ *   -webkit-touch-callout     길게 누르기 컨텍스트 메뉴(이미지 저장 등) 차단
+ *   tap-highlight-color       탭 시 파란 하이라이트 깜빡임 제거
+ *
+ * ⚠ 스크롤이 필요한 영역에는 절대 붙이지 말 것 (touch-action: none 이
+ *   터치 스크롤을 완전히 막는다).                                        */
+.hold-target {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}

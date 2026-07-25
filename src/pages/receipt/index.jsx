@@ -92,7 +92,7 @@ export default function Receipt() {
   /* ── hold 로직 (start 페이지와 공용 훅) ───────────────────
    *   최초 터치 지점에서 조금 움직여도 유지된다 (HOLD_MOVE_TOLERANCE_PX).
    *   intro 모달이 떠 있는 동안과 이미 트리거된 뒤에는 비활성.            */
-  const { isHolding, holdPos, onPointerDown } = useHoldTrigger({
+  const { isHolding, holdPos, holdHandlers } = useHoldTrigger({
     holdMs: HOLD_MS,
     onHold: () => handleReceipt(), // hold 완료 → 인쇄 → /end
     enabled: !introModalOpen && !firedRef.current,
@@ -106,7 +106,7 @@ export default function Receipt() {
     setIntroModalOpen(false);
     // 페이지 안내 — micGate 미부착 (duck 대상 아님, 무조건 끝까지 원래 볼륨)
     speak(
-      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 10초간 기다려주세요."
+      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 13초간 기다려주세요."
     );
     autoSkipTimerRef.current = setTimeout(() => {
       autoSkipTimerRef.current = null;
@@ -127,9 +127,12 @@ export default function Receipt() {
   return (
     <>
       {/* ── 본문 (nav 없음) — 선택 UI 는 intro 모달 닫힌 뒤 노출 ── */}
+      {/* hold-target — 웹뷰가 스크롤/텍스트선택으로 제스처를 가로채
+          hold 를 끊는 것을 방지 (receipt-scroll 은 overflow:hidden 이라
+          자체 스크롤이 없어 touch-action:none 이 안전) */}
       <main
-        className="kiosk-scroll receipt-scroll"
-        onPointerDown={onPointerDown}
+        className="kiosk-scroll receipt-scroll hold-target"
+        {...holdHandlers}
       >
         <h1 className="receipt-title">영수증을 받으시겠습니까?</h1>
 

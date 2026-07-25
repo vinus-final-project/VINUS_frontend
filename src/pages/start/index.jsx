@@ -30,7 +30,7 @@ export default function Start() {
   const cleanup = useSessionCleanup();
   const heldKeyRef = useRef(null);
 
-  const { isHolding, holdPos, onPointerDown, startHold, cancelHold } =
+  const { isHolding, holdPos, holdHandlers, startHold, cancelHold } =
     useHoldTrigger({
       holdMs: HOLD_MS,
       onHold: () => navigate("/main"),
@@ -70,11 +70,11 @@ export default function Start() {
 
   return (
     <div
-      className="start-screen"
+      className="start-screen hold-target"
       role="button"
       tabIndex={0}
       aria-label="시작 화면. 아무 키나 2초간 누르고 있으면 주문이 시작됩니다."
-      onPointerDown={onPointerDown}
+      {...holdHandlers}
     >
       <img className="start-icon" src={iconLight} alt="" aria-hidden="true" />
       <img className="start-logo-text" src={textLight} alt="vinus" />
