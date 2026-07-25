@@ -15,6 +15,15 @@ export const START_HOLD_MS = 2000;
 /* receipt: 화면 아무 곳이나 눌러 영수증 인쇄를 트리거하는 시간 (ms) */
 export const RECEIPT_HOLD_MS = 2000;
 
+/* hold 중 허용하는 손가락 이동 반경 (px, viewport 기준).
+ *   시각장애인 사용자는 화면을 더듬으며 누르기 때문에 손가락이 크게 흔들린다.
+ *   Infinity = 이동 거리로는 취소하지 않음 — 화면 어디로 끌고 가도 hold 유지.
+ *   취소는 오직 "손을 뗐을 때(pointerup)" 와 "시스템이 포인터를 회수했을 때
+ *   (pointercancel — 네이티브 스크롤 시작 등)" 뿐이다.
+ *
+ *   ※ 목록 스크롤과 hold 가 충돌하면 여기에 숫자(예: 80)를 넣어 제한할 것. */
+export const HOLD_MOVE_TOLERANCE_PX = Infinity;
+
 /* receipt: 아무 조작 없이 대기 시 자동으로 "영수증 안 받기" 처리 (ms).
  *   음성 UI 사용자 대응 — 응답이 없으면 넘어가도록. */
 export const RECEIPT_AUTO_SKIP_MS = 12000;

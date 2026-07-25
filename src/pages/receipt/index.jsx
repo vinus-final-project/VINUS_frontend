@@ -12,6 +12,7 @@ import buildReceiptText from "../../utils/receiptText";
 import useCart from "../../hooks/useCart";
 import useSession from "../../hooks/useSession";
 import usePrinter from "../../hooks/usePrinter";
+import useHoldTrigger from "../../hooks/useHoldTrigger";
 import useTts from "../../hooks/useTts";
 import receiptPng from "../../assets/receipt.png";
 import "./receipt.css";
@@ -47,11 +48,6 @@ export default function Receipt() {
   // mount 즉시 뜨는 대기번호 모달 — 3초 후 닫힘
   const [introModalOpen, setIntroModalOpen] = useState(true);
 
-  // hold 시각화용 상태 / 참조
-  const [isHolding, setIsHolding] = useState(false);
-  const [holdPos, setHoldPos] = useState(null);
-  const holdTimerRef = useRef(null);
-  const pointerHoldingRef = useRef(false);
   // 인쇄를 한 번만 실행하도록 방어 (버튼 탭 / hold / 자동스킵이 겹칠 때)
   const firedRef = useRef(false);
   // 아무 조작 없을 때 자동으로 "안 받기" 로 넘어가는 타이머
@@ -93,32 +89,14 @@ export default function Receipt() {
     navigate("/end");
   };
 
-  /* ── 3초 hold 로직 (start 페이지와 동일 패턴) ────────────── */
-  const startHold = (e) => {
-    if (firedRef.current || introModalOpen) return;
-    if (holdTimerRef.current) return;
-    pointerHoldingRef.current = true;
-    setHoldPos({ x: e.clientX, y: e.clientY });
-    setIsHolding(true);
-    holdTimerRef.current = setTimeout(() => {
-      holdTimerRef.current = null;
-      pointerHoldingRef.current = false;
-      setIsHolding(false);
-      setHoldPos(null);
-      handleReceipt(); // hold 완료 → 인쇄 → /end
-    }, HOLD_MS);
-  };
-
-  const cancelHold = () => {
-    if (!holdTimerRef.current && !pointerHoldingRef.current) return;
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    pointerHoldingRef.current = false;
-    setIsHolding(false);
-    setHoldPos(null);
-  };
+  /* ── hold 로직 (start 페이지와 공용 훅) ───────────────────
+   *   최초 터치 지점에서 조금 움직여도 유지된다 (HOLD_MOVE_TOLERANCE_PX).
+   *   intro 모달이 떠 있는 동안과 이미 트리거된 뒤에는 비활성.            */
+  const { isHolding, holdPos, onPointerDown } = useHoldTrigger({
+    holdMs: HOLD_MS,
+    onHold: () => handleReceipt(), // hold 완료 → 인쇄 → /end
+    enabled: !introModalOpen && !firedRef.current,
+  });
 
   /* ── intro 모달 자동 닫힘 콜백 ────────────────────────────
    *   모달 닫힘 → 선택 UI 노출 + 자동 스킵 타이머 시작.
@@ -128,7 +106,7 @@ export default function Receipt() {
     setIntroModalOpen(false);
     // 페이지 안내 — micGate 미부착 (duck 대상 아님, 무조건 끝까지 원래 볼륨)
     speak(
-      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 13초간 기다려주세요."
+      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 10초간 기다려주세요."
     );
     autoSkipTimerRef.current = setTimeout(() => {
       autoSkipTimerRef.current = null;
@@ -136,16 +114,14 @@ export default function Receipt() {
     }, RECEIPT_AUTO_SKIP_MS);
   };
 
-  // 언마운트 시 남은 타이머 정리
+  // 언마운트 시 남은 타이머 정리 (hold 타이머는 useHoldTrigger 가 자체 정리)
   useEffect(() => {
     return () => {
-      cancelHold();
       if (autoSkipTimerRef.current) {
         clearTimeout(autoSkipTimerRef.current);
         autoSkipTimerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -153,10 +129,7 @@ export default function Receipt() {
       {/* ── 본문 (nav 없음) — 선택 UI 는 intro 모달 닫힌 뒤 노출 ── */}
       <main
         className="kiosk-scroll receipt-scroll"
-        onPointerDown={startHold}
-        onPointerUp={cancelHold}
-        onPointerCancel={cancelHold}
-        onPointerLeave={cancelHold}
+        onPointerDown={onPointerDown}
       >
         <h1 className="receipt-title">영수증을 받으시겠습니까?</h1>
 

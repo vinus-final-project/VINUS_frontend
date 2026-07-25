@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { START_HOLD_MS as HOLD_MS } from "../../constants";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
+import useHoldTrigger from "../../hooks/useHoldTrigger";
 import iconLight from "../../assets/VINUS_icon_light.png";
 import textLight from "../../assets/VINUS_text_light.png";
 import "./start.css";
@@ -12,28 +13,28 @@ import "./start.css";
  * 시안: VINUS_icon_light.png (캐릭터) + VINUS_text_light.png (워드마크)
  *
  * 동작:
- *  - 키보드 키 또는 마우스/터치를 3초 이상 누르고 있으면 /main 으로 이동
- *  - 짧게 클릭 시 alert("화면")  — 이벤트 작성 위치 식별용
+ *  - 키보드 키 또는 마우스/터치를 START_HOLD_MS 이상 누르고 있으면 /main 이동
+ *  - 짧게 클릭은 무시 (hold 만 유효)
+ *
+ * hold 판정은 useHoldTrigger 가 담당 — 처음 누른 자리에서 조금 움직여도
+ * 유지되고(HOLD_MOVE_TOLERANCE_PX), 손을 떼거나 크게 끌면 취소된다.
  *
  * 구현 노트:
  *  - root 를 <button> 대신 <div role="button"> 으로 둠
  *    (<button> 은 Enter/Space 가 keydown 단계에서 synthetic click 을 합성)
  *  - e.repeat (OS 자동 반복) 은 무시
- *  - 시각적 진행 표시는 시안에 없으므로 제거 (기능만 유지)
  * ────────────────────────────────────────────────────────────── */
 
 export default function Start() {
   const navigate = useNavigate();
   const cleanup = useSessionCleanup();
-  const holdTimerRef = useRef(null);
   const heldKeyRef = useRef(null);
-  const pointerHoldingRef = useRef(false);
-  /*  3초 hold 시각화:
-   *    - isHolding : SVG 마운트/애니메이션 스위치
-   *    - holdPos   : 실제 터치 좌표 (viewport 기준 px). 포인터 hold 만 세팅.
-   *                  키보드 hold 는 좌표가 없으므로 null → 프로그레스 표시 안 함. */
-  const [isHolding, setIsHolding] = useState(false);
-  const [holdPos, setHoldPos] = useState(null);
+
+  const { isHolding, holdPos, onPointerDown, startHold, cancelHold } =
+    useHoldTrigger({
+      holdMs: HOLD_MS,
+      onHold: () => navigate("/main"),
+    });
 
   /* start(/) 진입 = 새 손님/새 시작 — 세션 정리의 "이탈 수렴점".
    * "처음으로" 버튼 / 결제 도중 이탈 / F5 / 직접 입력 전부 여기로 온다.
@@ -46,78 +47,39 @@ export default function Start() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startHold = () => {
-    if (holdTimerRef.current) return;
-    setIsHolding(true);
-    holdTimerRef.current = setTimeout(() => {
-      holdTimerRef.current = null;
-      heldKeyRef.current = null;
-      pointerHoldingRef.current = false;
-      setIsHolding(false);
-      navigate("/main");
-    }, HOLD_MS);
-  };
-
-  const cancelHold = () => {
-    if (!holdTimerRef.current) return;
-    clearTimeout(holdTimerRef.current);
-    holdTimerRef.current = null;
-    heldKeyRef.current = null;
-    pointerHoldingRef.current = false;
-    setIsHolding(false);
-    setHoldPos(null);
-  };
-
-  /* 키보드 hold */
+  /* 키보드 hold (개발 편의) — 좌표가 없어 프로그레스는 표시되지 않음 */
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.repeat || heldKeyRef.current) return;
       heldKeyRef.current = e.key;
-      startHold();
+      startHold(); // pos 없음
     };
     const onKeyUp = (e) => {
-      if (heldKeyRef.current === e.key) cancelHold();
+      if (heldKeyRef.current === e.key) {
+        heldKeyRef.current = null;
+        cancelHold();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
-      cancelHold();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /* 포인터 hold (마우스/터치) — 실제 터치 좌표를 저장해 그 자리에 프로그레스 표시 */
-  const onPointerDown = (e) => {
-    pointerHoldingRef.current = true;
-    setHoldPos({ x: e.clientX, y: e.clientY });
-    startHold();
-  };
-  const onPointerEndAny = () => {
-    if (pointerHoldingRef.current) cancelHold();
-  };
-
-  /* 짧게 클릭은 무시 (3초 hold 만 유효) */
-  const handleScreenClick = () => {
-  };
+  }, [startHold, cancelHold]);
 
   return (
     <div
       className="start-screen"
       role="button"
       tabIndex={0}
-      aria-label="시작 화면. 아무 키나 3초간 누르고 있으면 주문이 시작됩니다."
-      onClick={handleScreenClick}
+      aria-label="시작 화면. 아무 키나 2초간 누르고 있으면 주문이 시작됩니다."
       onPointerDown={onPointerDown}
-      onPointerUp={onPointerEndAny}
-      onPointerCancel={onPointerEndAny}
-      onPointerLeave={onPointerEndAny}
     >
       <img className="start-icon" src={iconLight} alt="" aria-hidden="true" />
       <img className="start-logo-text" src={textLight} alt="vinus" />
 
-      {/* 3초 hold 원형 프로그레스 — 실제 터치 좌표에 작게 표시.
+      {/* hold 원형 프로그레스 — 최초 터치 좌표에 고정 표시.
           키보드 hold(dev)는 holdPos 가 없어 렌더 안 함. */}
       {isHolding && holdPos && (
         <svg
@@ -132,7 +94,7 @@ export default function Start() {
         >
           {/* 배경 링 */}
           <circle className="hold-progress-bg" cx="50" cy="50" r="45" />
-          {/* 진행 링 — CSS keyframes 로 3초에 걸쳐 채워짐 */}
+          {/* 진행 링 — CSS keyframes 로 HOLD_MS 에 걸쳐 채워짐 */}
           <circle className="hold-progress-arc" cx="50" cy="50" r="45" />
         </svg>
       )}
