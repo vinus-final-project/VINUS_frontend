@@ -30,11 +30,13 @@ import { markTtsStart } from "../utils/perfTrace";
  * ────────────────────────────────────────────────────────────── */
 export default function TtsPlayer() {
     const { message, responseSeq } = useSession();
-    const { status: wsStatus } = useWebSocket();
+    const { status: wsStatus, sendJson } = useWebSocket();
     const { speak, stop } = useTts();
 
     // 이미 처리한 응답 seq (SessionRouter 와 동일한 중복 방지 패턴)
     const handledSeqRef = useRef(0);
+    // TTS 종료 알림 지연 타이머(잔향 흡수) — 새 재생 시작 시 취소
+    const ttsOffTimerRef = useRef(null);
 
     /* micGate 배선:
      *   ▸ setTtsStopperMic(stop) — 결제 잠금 시 즉시 중단용
@@ -78,8 +80,22 @@ export default function TtsPlayer() {
             onStart: () => {
                 ttsStartedMic();
                 markTtsStart(); // [perf] T2 — TTS 재생 시작 (측정용)
+                // 백엔드 에코 필터용: TTS 재생 시작 알림 (재생 중에만 필터 켜짐)
+                if (ttsOffTimerRef.current) {
+                    clearTimeout(ttsOffTimerRef.current);
+                    ttsOffTimerRef.current = null;
+                }
+                try { sendJson?.({ type: "TTS_STATE", active: true }); } catch { /* ignore */ }
             },
-            onEnd: ttsEndedMic,
+            onEnd: () => {
+                ttsEndedMic();
+                // 잔향 250ms 흡수 후 종료 알림 (스피커 잔향이 에코로 안 잡히게)
+                if (ttsOffTimerRef.current) clearTimeout(ttsOffTimerRef.current);
+                ttsOffTimerRef.current = setTimeout(() => {
+                    ttsOffTimerRef.current = null;
+                    try { sendJson?.({ type: "TTS_STATE", active: false }); } catch { /* ignore */ }
+                }, 250);
+            },
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [responseSeq]);

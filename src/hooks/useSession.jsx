@@ -7,6 +7,11 @@ import { MAIN_TIME_LIMIT_SEC } from "../constants";
  *  하려면 session_id 가 필요하므로 SS 에 백업한다.
  *  sessionStorage 이유: 탭/앱 세션 종료 시 자동 삭제 → 다음 손님 노출 방지. */
 const SS_SID_KEY = "vinus.session.session_id";
+/*  order_type(매장/포장) SS 백업 키.
+ *  영수증에 "매장/포장 : 매장" 을 찍어야 하는데, 토스 리다이렉트 리로드로
+ *  Context 가 초기화되면 order_type 이 사라진다. session_id 와 동일한
+ *  수명으로 백업/폐기한다.                                                */
+const SS_ORDER_TYPE_KEY = "vinus.session.order_type";
 const readSSString = (key) => {
     try {
         const raw = sessionStorage.getItem(key);
@@ -33,6 +38,7 @@ try {
     if (!window.location.pathname.startsWith("/pay")) {
         staleSessionId = sessionStorage.getItem(SS_SID_KEY) || null;
         sessionStorage.removeItem(SS_SID_KEY);
+        sessionStorage.removeItem(SS_ORDER_TYPE_KEY);
     }
 } catch {
     /* ignore (SSR/테스트 환경 등) */
@@ -102,7 +108,8 @@ const INITIAL_STATE = {
     success: false,
     message: null,
     fsm_state: "INIT",
-    order_type: null,
+    // Toss 리로드 대응 — SS 백업이 있으면 그 값으로 시작 (영수증 매장/포장 표기)
+    order_type: readSSString(SS_ORDER_TYPE_KEY),
     order_item: null,
     current_menu: null,       // MenusDetailResponse — orderDetail 렌더용
     cart: [],
@@ -206,10 +213,11 @@ export const SessionProvider = ({ children }) => {
     const resetSession = useCallback(() => {
         try {
             sessionStorage.removeItem(SS_SID_KEY);
+            sessionStorage.removeItem(SS_ORDER_TYPE_KEY);
         } catch {
             /* ignore */
         }
-        setSession({ ...INITIAL_STATE, session_id: null });
+        setSession({ ...INITIAL_STATE, session_id: null, order_type: null });
     }, []);
 
     /* session_id 변경 시 SS 백업 (리로드 대응) */
@@ -222,6 +230,17 @@ export const SessionProvider = ({ children }) => {
             /* ignore */
         }
     }, [session.session_id]);
+
+    /* order_type 변경 시 SS 백업 (영수증 매장/포장 표기 — 리로드 생존) */
+    useEffect(() => {
+        try {
+            if (session.order_type) {
+                sessionStorage.setItem(SS_ORDER_TYPE_KEY, session.order_type);
+            }
+        } catch {
+            /* ignore */
+        }
+    }, [session.order_type]);
 
     const value = useMemo(
         () => ({

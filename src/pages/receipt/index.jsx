@@ -10,6 +10,7 @@ import {
 import { peekOrderNumber } from "../../utils/orderNumber";
 import buildReceiptText from "../../utils/receiptText";
 import useCart from "../../hooks/useCart";
+import useSession from "../../hooks/useSession";
 import usePrinter from "../../hooks/usePrinter";
 import useTts from "../../hooks/useTts";
 import receiptPng from "../../assets/receipt.png";
@@ -34,6 +35,8 @@ import "./receipt.css";
 export default function Receipt() {
   const navigate = useNavigate();
   const { lastOrder } = useCart();
+  // order_type — 영수증 "매장/포장" 표기용 (SS 백업으로 토스 리로드 생존)
+  const { order_type } = useSession();
   const { printReceipt } = usePrinter();
   const { speak } = useTts();
 
@@ -78,6 +81,7 @@ export default function Receipt() {
         orderNumber,
         items: lastOrder ?? [],
         totalPrice,
+        orderType: order_type,
       });
       Promise.resolve()
         .then(() => printReceipt(text))
