@@ -6,19 +6,51 @@
  *
  * 사용:
  *   const text = buildReceiptText({
- *     storeName, orderNumber, items, totalPrice, orderedAt,
+ *     storeName, orderNumber, items, totalPrice, orderedAt, orderType,
  *   });
  *   // items: useCart lastOrder 형식
- *   //   [{ m_name, o_m_qty, unitPrice, options: [{op_name, qty}] }]
+ *   //   [{ m_name, o_m_qty, unitPrice, options: [{op_name, op_price, qty}] }]
+ *   // orderType: "STORE" | "TAKEOUT"
+ *
+ * 출력 형식
+ *   ==============================
+ *    주문번호
+ *                              008
+ *   ==============================
+ *    VINUS 종로점   2026-07-22 15:59
+ *   매장/포장 : 매장
+ *   ------------------------------
+ *     상품명  수량           금액
+ *   ------------------------------
+ *   에스프레소 x1            1,500
+ *     온도: ICE
+ *     사이즈: 레귤러
+ *
+ *   헤이즐넛라떼 x1          3,800
+ *     온도: HOT
+ *     샷 추가: x2           +1,000
+ *   ------------------------------
+ *   부가세 과세 물품가액:     9,182
+ *   부가세:                     918
+ *
+ *   합계:                    10,100
+ *   ==============================
+ *        이용해 주셔서 감사합니다
  * ────────────────────────────────────────────────────────────── */
 
 import { STORE_NAME } from "../constants"
+import { buildOptionLabel } from "./optionGroup"
 
 /* COLS — 한 줄에 담을 문자 수.
  *   receiptImage.js 의 fontSize(30) 기준 monospace 한 글자 폭 ≈ 18도트.
  *   인쇄 폭 576도트에 30글자 담으면 30×18 = 540 (여유 36). 우측 넘치지 않음.
  *   fontSize 를 조정하면 COLS 도 같이 재계산해야 함.                       */
 const COLS = 30;
+
+/* 부가세율 — 과세 물품가액/부가세는 프론트에서 계산한다.
+ *   공급가액 = round(합계 / 1.1),  부가세 = 합계 - 공급가액
+ *   (토스 승인 응답의 suppliedAmount/vat 에 의존하지 않는 정책)            */
+const VAT_RATE = 0.1;
 
 /* 인쇄는 usePrinter 가 Canvas → PNG(printBase64) 방식으로 처리한다.
  * 이미지 인쇄는 ESC/POS 프리픽스가 무의미(오히려 이미지 상단에 잔재
@@ -43,10 +75,14 @@ const lineCenter = (s) => {
 
 const hr = (ch = "-") => ch.repeat(COLS);
 
-const formatWon = (n) => `${(n ?? 0).toLocaleString()}원`;
+/* 금액 포맷 — 영수증 본문은 숫자만 (단위 "원" 생략, 열 정렬 우선) */
+const formatNum = (n) => (n ?? 0).toLocaleString();
 
 /* 주문번호 3자리 패딩 (1 → "001") */
 export const formatOrderNo = (n) => String(n ?? 0).padStart(3, "0");
+
+/* order_type → 표기 (backend OrderType enum) */
+const ORDER_TYPE_LABEL = { STORE: "매장", TAKEOUT: "포장" };
 
 /* receiptImage.js 가 파싱하는 마크업:
  *   접두사 "##" — 그 줄은 큰 폰트 + 중앙 정렬로 렌더 (주문번호 등 강조용)     */
@@ -58,6 +94,7 @@ export const buildReceiptText = ({
     items = [],
     totalPrice = 0,
     orderedAt = new Date(),
+    orderType = null, // "STORE" | "TAKEOUT" | null
 }) => {
     const dt = orderedAt instanceof Date ? orderedAt : new Date(orderedAt);
     const stamp =
@@ -68,6 +105,10 @@ export const buildReceiptText = ({
     const orderNoStr =
         typeof orderNumber === "string" ? orderNumber : formatOrderNo(orderNumber);
 
+    /* 부가세 — 프론트 계산 (합계 = 공급가액 + 부가세) */
+    const supplied = Math.round(totalPrice / (1 + VAT_RATE));
+    const vat = totalPrice - supplied;
+
     const out = [];
 
     // ── 상단: 주문번호 강조 블럭 ─────────────────────────────
@@ -76,33 +117,46 @@ export const buildReceiptText = ({
     out.push(H_PREFIX + orderNoStr);   // 큰 폰트 + 중앙정렬
     out.push(hr("="));
 
-    // ── 매장/시각 ────────────────────────────────────────────
-    out.push(storeName || "가맹점명");
-    out.push(stamp);
+    // ── 매장명 / 시각 / 매장·포장 ────────────────────────────
+    out.push(lineLR(storeName || "가맹점명", stamp));
+    if (orderType && ORDER_TYPE_LABEL[orderType]) {
+        out.push(`매장/포장 : ${ORDER_TYPE_LABEL[orderType]}`);
+    }
+    out.push(hr("-"));
+
+    // ── 상품 헤더 ────────────────────────────────────────────
+    out.push(lineLR("  상품명  수량", "금액"));
     out.push(hr("-"));
 
     // ── 메뉴 항목 ────────────────────────────────────────────
-    for (const it of items) {
+    items.forEach((it, idx) => {
         const qty = it.o_m_qty ?? 1;
         const price = (it.unitPrice ?? 0) * qty;
-        out.push(lineLR(`${it.m_name} x${qty}`, formatWon(price)));
+        out.push(lineLR(`${it.m_name} x${qty}`, formatNum(price)));
+
+        /* 선택 옵션 — "옵션그룹명: 옵션명" + 추가금(있을 때만) */
         for (const op of it.options ?? []) {
             const opQty = op.qty ?? 1;
             const opPrice = (op.op_price ?? 0) * opQty;
-            const label =
-                opQty > 1 ? ` - ${op.op_name} x${opQty}` : ` - ${op.op_name}`;
+            const label = `  ${buildOptionLabel(op.op_name, opQty)}`;
             if (opPrice > 0) {
-                out.push(lineLR(label, `+ ${formatWon(opPrice)}`));
+                out.push(lineLR(label, `+${formatNum(opPrice)}`));
             } else {
                 out.push(label);
             }
         }
-    }
+
+        // 메뉴 사이 빈 줄 (마지막 항목 뒤에는 넣지 않음)
+        if (idx < items.length - 1) out.push("");
+    });
 
     out.push(hr("-"));
 
-    // ── 합계 ─────────────────────────────────────────────────
-    out.push(lineLR("합계", formatWon(totalPrice)));
+    // ── 부가세 내역 + 합계 ───────────────────────────────────
+    out.push(lineLR("부가세 과세 물품가액:", formatNum(supplied)));
+    out.push(lineLR("부가세:", formatNum(vat)));
+    out.push("");
+    out.push(lineLR("합계:", formatNum(totalPrice)));
     out.push(hr("="));
 
     // ── 감사 인사 ────────────────────────────────────────────

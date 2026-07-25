@@ -55,6 +55,4 @@ api.interceptors.response.use(
     }
 );
 
-export const buildFileUrl = (filePath) => filePath;
-
 export default api;
