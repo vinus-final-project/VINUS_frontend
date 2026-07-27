@@ -55,9 +55,9 @@ const THRESHOLD_DB = -15;        // 게이트 여는 데시벨 (환경 소음에
 //   실기기에서 TTS 재생 중 [mic] max dB 로그를 보고 조정:
 //   bleed max 가 -30 이면 -25 정도가 적당.
 //   임계값 돌파 시 duckTtsMic() 호출 → TTS 볼륨 50% 감소 (재생 유지).
-const UTTER_ENTER_DB = -25;
+const UTTER_ENTER_DB = -15;
 const PREBUFFER_CHUNKS = 3;      // 프리버퍼 크기 (~192ms) — 첫마디 잘림 방지
-const HANGOVER_CHUNKS = 5;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~320ms, 말끝 보존용)
+const HANGOVER_CHUNKS = 10;       // 임계값 밑으로 떨어진 후에도 전송 유지 (~320ms, 말끝 보존용)
                                  //   발화 커트는 EOS 무음 패딩이 담당 — 잘림 발생 시 6~7로 상향
 // 게이트 닫힘 직후 밀어넣는 무음(0) 청크 수 (~768ms)
 // backend VAD 의 발화종료 판정(END_SILENCE_FRAMES=30, 600ms)보다 길어야 함
