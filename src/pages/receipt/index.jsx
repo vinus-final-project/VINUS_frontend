@@ -107,7 +107,7 @@ export default function Receipt() {
     setIntroModalOpen(false);
     // 페이지 안내 — duckable 없이 토글 (누설음 차단만, 볼륨은 끝까지 유지)
     speak(
-      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 13초간 기다려주세요.",
+      "영수증이 필요하시면 화면을 3초간 눌러주세요. 필요하지 않으시면 10초간 기다려주세요.",
       { onStart: ttsStartedMic, onEnd: ttsEndedMic }
     );
     autoSkipTimerRef.current = setTimeout(() => {
