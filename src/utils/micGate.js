@@ -44,7 +44,31 @@ let stopper = null;      // TtsPlayer 의 재생 중단 함수 (결제 잠금용
 let ducker = null;       // { duck, unduck } — 볼륨 조절자 (mediaVolume)
 let duckedNow = false;   // 현재 duck 적용 상태 (중복 호출 방지)
 
-/** TTS 재생 중인가 — 누설음 차단 판정용 (모든 TTS) */
+/* ── 재생 상태 구독 ────────────────────────────────────────
+ * VoiceCapture 가 "안내가 끝난 뒤에" 마이크를 열기 위해 사용한다.
+ * getUserMedia 가 실행되면 안드로이드가 오디오 모드를 전환하면서
+ * 재생 중이던 TTS 출력이 순간 끊기기 때문(음절 중간이 비는 증상).
+ *
+ * playing 이 실제로 바뀔 때만 통지한다 (tail 취소 등 무변화는 조용히).  */
+const listeners = new Set();
+
+const notify = () => {
+    for (const fn of listeners) {
+        try {
+            fn(playing);
+        } catch {
+            /* 구독자 예외가 다른 구독자를 막지 않도록 */
+        }
+    }
+};
+
+/** 재생 상태 변화 구독 — 반환값은 해제 함수 */
+export const subscribeTtsMic = (fn) => {
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+};
+
+/** TTS 재생 중인가 — 누설음 차단 / 마이크 오픈 지연 판정용 (모든 TTS) */
 export const isTtsPlayingMic = () => playing;
 
 /** 현재 재생이 duck 대상인가 — 볼륨 감쇠 판정용 (TtsPlayer 만) */
@@ -78,19 +102,23 @@ export const ttsStartedMic = ({ duckable: canDuck = false } = {}) => {
         clearTimeout(tailTimer);
         tailTimer = null;
     }
+    const wasPlaying = playing;
     playing = true;
     duckable = canDuck;
+    if (!wasPlaying) notify();
 };
 
 /** TTS 재생 종료 — 잔향 테일이 지난 뒤 해제 + duck 안전망 원복 */
 export const ttsEndedMic = () => {
     if (tailTimer) clearTimeout(tailTimer);
     tailTimer = setTimeout(() => {
+        const wasPlaying = playing;
         playing = false;
         duckable = false;
         tailTimer = null;
         // 발화 중에 재생이 끝난 경우 등 — duck 이 남아 있으면 복구
         restoreVolume();
+        if (wasPlaying) notify(); // 대기 중인 VoiceCapture 에 마이크 오픈 허용
     }, TAIL_MS);
 };
 
@@ -136,8 +164,10 @@ export const lockForPaymentMic = () => {
         clearTimeout(tailTimer);
         tailTimer = null;
     }
+    const wasPlaying = playing;
     playing = false;
     duckable = false;
+    if (wasPlaying) notify();
 };
 
 export const unlockForPaymentMic = () => {
