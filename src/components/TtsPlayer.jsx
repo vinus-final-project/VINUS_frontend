@@ -20,23 +20,26 @@ import { markTtsStart } from "../utils/perfTrace";
  * 동작:
  *   - responseSeq 가 바뀔 때(= 새 SessionResponse 수신)만 반응
  *   - message 가 있으면 speak() — 재생 중이던 이전 안내는 자동 취소
- *   - 재생 중 사용자 발화가 감지되면 duck (시스템 미디어 볼륨 50%),
- *     발화 종료 시 unduck 로 원복. 재생은 끝까지 유지.
+ *   - 재생 중 사용자 발화가 감지되면 duck (시스템 미디어 볼륨 감쇠),
+ *     발화 종료 시 unduck 로 원복. 재생 자체는 끝까지 유지.
  *   - 결제 페이지 진입(lockForPaymentMic)에서는 stopper 로 즉시 중단.
  *   - 미지원 브라우저/합성 실패는 조용히 무시 — 안내 음성은 부가 기능
  *
- * ※ PageGuide/receipt/end/receiptModal 안내는 여기와 별개다 —
- *   그쪽은 micGate 콜백을 붙이지 않아 duck 대상이 아니다 (무조건 끝까지).
+ * ※ 이 컴포넌트만 ttsStartedMic({ duckable: true }) 로 재생을 시작한다.
+ *   PageGuide/receipt/end/receiptModal 의 페이지 안내는 duckable=false —
+ *   누설음 차단은 동일하게 받되 볼륨은 그대로 끝까지 재생된다.
+ *
+ * ※ 에코 방어는 프론트에서만 처리한다 (micGate 의 UTTER_ENTER_DB 게이트).
+ *   backend 에 TTS_STATE 를 알리던 코드가 있었으나, 서버에 해당 처리가
+ *   구현된 적이 없어 stream_meta 만 오염시켜 제거했다.
  * ────────────────────────────────────────────────────────────── */
 export default function TtsPlayer() {
     const { message, responseSeq } = useSession();
-    const { status: wsStatus, sendJson } = useWebSocket();
+    const { status: wsStatus } = useWebSocket();
     const { speak, stop } = useTts();
 
     // 이미 처리한 응답 seq (SessionRouter 와 동일한 중복 방지 패턴)
     const handledSeqRef = useRef(0);
-    // TTS 종료 알림 지연 타이머(잔향 흡수) — 새 재생 시작 시 취소
-    const ttsOffTimerRef = useRef(null);
 
     /* micGate 배선:
      *   ▸ setTtsStopperMic(stop) — 결제 잠금 시 즉시 중단용
@@ -73,29 +76,15 @@ export default function TtsPlayer() {
         // 결제 잠금 중(pay 페이지 — 토스 결제창 표시)에는 재생하지 않음
         if (isPaymentLockedMic()) return;
 
-        // 재생 시작/종료에 micGate TTS-active 상태 동기화
-        //   → useMicStream 이 이 상태를 보고 duck 판정 실행
-        //   (onEnd 는 정상 종료·취소·오류 모두에서 1회 보장 — useTts)
+        /* 재생 시작/종료를 micGate 에 동기화.
+         *   duckable: true — 이 안내만 발화 감지 시 볼륨 감쇠 대상.
+         *   (onEnd 는 정상 종료·취소·오류 모두에서 1회 보장 — useTts)     */
         speak(message, {
             onStart: () => {
-                ttsStartedMic();
+                ttsStartedMic({ duckable: true });
                 markTtsStart(); // [perf] T2 — TTS 재생 시작 (측정용)
-                // 백엔드 에코 필터용: TTS 재생 시작 알림 (재생 중에만 필터 켜짐)
-                if (ttsOffTimerRef.current) {
-                    clearTimeout(ttsOffTimerRef.current);
-                    ttsOffTimerRef.current = null;
-                }
-                try { sendJson?.({ type: "TTS_STATE", active: true }); } catch { /* ignore */ }
             },
-            onEnd: () => {
-                ttsEndedMic();
-                // 잔향 250ms 흡수 후 종료 알림 (스피커 잔향이 에코로 안 잡히게)
-                if (ttsOffTimerRef.current) clearTimeout(ttsOffTimerRef.current);
-                ttsOffTimerRef.current = setTimeout(() => {
-                    ttsOffTimerRef.current = null;
-                    try { sendJson?.({ type: "TTS_STATE", active: false }); } catch { /* ignore */ }
-                }, 250);
-            },
+            onEnd: ttsEndedMic,
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [responseSeq]);

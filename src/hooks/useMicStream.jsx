@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
-    isTtsActiveMic,
+    isTtsPlayingMic,
     duckTtsMic,
     unduckTtsMic,
     isPaymentLockedMic,
@@ -30,10 +30,11 @@ import { markUtteranceEnd } from "../utils/perfTrace";
  *   ▸ 행오버(Hangover) — 임계값 아래로 내려가도 HANGOVER_CHUNKS 동안
  *     전송 유지 → 말끝/단어 사이 쉼에서 게이트가 덜컥 닫히는 것 방지.
  *
- * TTS duck (utils/micGate.js, mediaVolume.js):
- *   TtsPlayer 재생 중 발화가 감지되면 시스템 미디어 볼륨을 50% 로 낮춤
- *   (재생은 유지). 발화 종료 시 원복. PageGuide 등 페이지 안내는 duck
- *   대상 아님 (isTtsActiveMic() false → 이 로직 자체가 관여 안 함).
+ * TTS 재생 중 동작 (utils/micGate.js, mediaVolume.js):
+ *   ▸ 누설음 차단 — **모든 TTS** 재생 중에는 임계값을 UTTER_ENTER_DB 로
+ *     올려 스피커 소리가 backend 로 흘러가지 않게 한다 (에코 방지).
+ *   ▸ duck — 임계값을 넘는 실제 발화가 감지되면 시스템 미디어 볼륨을
+ *     낮춘다. 단 duck 대상(TtsPlayer)일 때만. 페이지 안내는 볼륨 유지.
  *
  * 사용 예
  *   const { start, stop } = useMicStream({
@@ -156,18 +157,21 @@ export function useMicStream({ onChunk } = {}) {
 
         const db = chunkDb(float32);
 
-        /* ── duck: TTS 재생 중 새 발화 시작 판정 (utils/micGate.js) ─
-         *    마이크는 끄지 않고 TTS 도 끊지 않는다. 대신 발화가 감지되면
-         *    시스템 미디어 볼륨을 50% 로 낮춰(duck) 안내가 발화를 방해하지
-         *    않게 하고, hangover 만료 시 원복(unduck).
+        /* ── TTS 재생 중 처리 (utils/micGate.js) ────────────────────
+         *    마이크는 끄지 않고 TTS 도 끊지 않는다. 재생 중에는 더 높은
+         *    임계값(UTTER_ENTER_DB)만 통과시켜 스피커 누설음(bleed)이
+         *    backend 로 흘러가 자기 TTS 를 되먹는 것을 막는다.
+         *      ▸ 이 차단은 **모든 TTS** 에 적용 (페이지 안내 포함).
+         *        안 그러면 안내 음성이 STT 로 돌아와 자기 자신을 끊는다.
+         *      ▸ 임계값을 넘으면 실제 사용자 발화 → duck 대상 재생일 때만
+         *        볼륨을 낮춘다 (duckTtsMic 내부에서 isDuckableMic 확인).
+         *        페이지 안내는 duckable=false 라 볼륨 그대로 유지.
          *
-         *    hangoverRef>0 (=발화 진행 중) 이면 이미 duck 상태이거나
-         *    duck 대상 아닌 안내(PageGuide 등)이므로 일반 게이트로 넘긴다.
-         *    hangoverRef===0 (=새 발화 시작 판정) 일 때만 UTTER_ENTER_DB
-         *    임계값으로 판정 — bleed 는 걸러지고 발화 피크만 통과.        */
-        if (isTtsActiveMic() && hangoverRef.current === 0) {
+         *    hangoverRef>0 (=발화 진행 중) 이면 판정을 건너뛰고 일반
+         *    게이트로 넘긴다 — 발화 도중 임계값이 바뀌면 말이 끊긴다.      */
+        if (isTtsPlayingMic() && hangoverRef.current === 0) {
             if (db >= UTTER_ENTER_DB) {
-                duckTtsMic();              // TTS 볼륨 50% (재생 유지)
+                duckTtsMic();              // duck 대상이면 볼륨 감쇠 (재생 유지)
                 preBufferRef.current = []; // bleed 섞인 프리버퍼 폐기
                 // fall through — 아래 일반 게이트가 발화 시작으로 처리
             } else {

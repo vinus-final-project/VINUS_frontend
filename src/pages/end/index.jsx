@@ -7,6 +7,7 @@ import useCart from "../../hooks/useCart";
 import useMenu, { getMenuUnit } from "../../api/useMenu";
 import useSessionCleanup from "../../hooks/useSessionCleanup";
 import useTts from "../../hooks/useTts";
+import { ttsStartedMic, ttsEndedMic } from "../../utils/micGate";
 import OrderSummaryModal from "../../components/modal/orderSummaryModal";
 import "./end.css";
 
@@ -97,8 +98,8 @@ export default function End() {
         .join(", ");
     const total = displayItems.reduce((s, it) => s + (it.price || 0), 0);
     const text = `주문 내역을 알려드립니다. ${summary}. 합계 ${total.toLocaleString()}원 입니다.`;
-    // 페이지 안내 — micGate 미부착 (duck 대상 아님, 무조건 끝까지 원래 볼륨)
-    speak(text);
+    // 페이지 안내 — duckable 없이 토글 (누설음 차단만, 볼륨은 끝까지 유지)
+    speak(text, { onStart: ttsStartedMic, onEnd: ttsEndedMic });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayItems]);
 

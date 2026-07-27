@@ -3,7 +3,11 @@ import { useLocation } from "react-router-dom";
 import useSession from "../hooks/useSession";
 import useTts from "../hooks/useTts";
 import { resolvePageGuideText } from "../constants";
-import { isPaymentLockedMic } from "../utils/micGate";
+import {
+    isPaymentLockedMic,
+    ttsStartedMic,
+    ttsEndedMic,
+} from "../utils/micGate";
 
 /* ──────────────────────────────────────────────────────────────
  * PageGuide — 페이지 입장 음성 안내 (전역 상주, 렌더 없음)
@@ -24,11 +28,15 @@ import { isPaymentLockedMic } from "../utils/micGate";
  *   - 결제 잠금 중 (pay — micGate)
  *   - 백엔드 message 가 이 전이를 담당할 때 (위 규칙)
  *
- * 정책 (2026-07-24 개편):
+ * 정책:
  *   페이지 안내는 사용자 발화가 감지되어도 "무조건 끝까지" 원래 볼륨으로
- *   재생. micGate 콜백(ttsStartedMic/ttsEndedMic)을 붙이지 않아
- *   isTtsActiveMic()=false → useMicStream 의 duck 로직이 관여하지 않는다.
- *   (duck 대상은 오직 TtsPlayer의 SessionResponse.message 안내)
+ *   재생된다 — ttsStartedMic 을 duckable 없이(=false) 호출하므로 duck
+ *   대상이 아니다.
+ *
+ *   단 micGate 토글 자체는 반드시 해야 한다. playing=true 여야
+ *   useMicStream 이 스피커 누설음을 걸러내기 때문. 이걸 빼면 안내 음성이
+ *   마이크 → backend STT 로 되돌아와, 그 응답을 TtsPlayer 가 재생하면서
+ *   재생 중이던 안내를 끊어버린다. (/main 안내가 중간에 잘리던 원인)
  * ────────────────────────────────────────────────────────────── */
 export default function PageGuide() {
     const { pathname } = useLocation();
@@ -56,8 +64,8 @@ export default function PageGuide() {
         const text = resolvePageGuideText(pathname);
         if (!text) return;
 
-        // micGate 콜백 미부착 — duck 대상 아님 (무조건 끝까지 원래 볼륨)
-        speak(text);
+        // duckable 없이 토글 — 누설음 차단은 받되 볼륨은 그대로 유지
+        speak(text, { onStart: ttsStartedMic, onEnd: ttsEndedMic });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname, responseSeq, message]);
 
