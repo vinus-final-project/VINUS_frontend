@@ -55,8 +55,10 @@ export default function PageGuide() {
         prevPathRef.current = pathname;
         seqAtLastRouteRef.current = responseSeq;
 
-        // 결제 잠금 중(pay 페이지) — 안내 금지
-        if (isPaymentLockedMic() || pathname.startsWith("/pay")) return;
+        /* 결제 잠금 중(pay 페이지) — 안내 금지.
+         * ⚠ 정확히 "/pay" 만 비교할 것. startsWith("/pay") 로 두면
+         *   "/payment"(결제 수단 선택)까지 걸려 안내가 통째로 죽는다. */
+        if (isPaymentLockedMic() || pathname === "/pay") return;
 
         // 이 전이에 백엔드 message 가 실려 왔으면 그쪽(TtsPlayer)이 우선
         if (responseSeq !== seqAtLastRoute && message && message.trim()) return;
